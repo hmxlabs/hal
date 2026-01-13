@@ -2,6 +2,19 @@
 
 An AI-first approach to building a next-generation HPC and AI workload scheduler.
 
+## AI-First Development Experiment
+
+**This project is first and foremost an experiment in AI-first software development.**
+
+The primary goal is to explore how viable AI-assisted development is for creating large, complex codebases that require high performance. By building a production-grade HPC scheduler using AI as the primary development tool, we aim to:
+
+- Establish best practices for AI-first development workflows
+- Understand the limitations and capabilities of AI when building performance-critical systems
+- Document the trade-offs between development speed and code quality
+- Create a reference implementation that demonstrates what's achievable with AI-first development
+
+The scheduler itself serves as an ideal test case—it requires sophisticated algorithms, concurrent programming, distributed systems knowledge, and performance optimization—all areas that will thoroughly test the viability of AI-first development methodologies.
+
 ## Overview
 
 HAL is a modern scheduler designed to combine the best aspects of existing scheduling solutions:
