@@ -320,60 +320,42 @@ The Cache Control Plane is the central coordination service that maintains a com
 
 ### API
 
-The Cache Control Plane exposes both REST and gRPC APIs for different use cases:
+The Cache Control Plane exposes a REST API for all operations:
 
 #### Cache Instance APIs
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/instances` | GET | List all registered cache instances |
-| `/api/v1/instances/{id}` | GET | Get details of a specific cache instance |
-| `/api/v1/instances/{id}/register` | POST | Register a new cache instance |
-| `/api/v1/instances/{id}/heartbeat` | POST | Cache instance heartbeat with health status |
-| `/api/v1/instances/{id}/deregister` | DELETE | Deregister a cache instance |
+| `/v1/instances` | GET | List all registered cache instances |
+| `/v1/instances/{id}` | GET | Get details of a specific cache instance |
+| `/v1/instances/{id}/register` | POST | Register a new cache instance |
+| `/v1/instances/{id}/heartbeat` | POST | Cache instance heartbeat with health status |
+| `/v1/instances/{id}/deregister` | DELETE | Deregister a cache instance |
 
 #### Content Map APIs
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/content/locate/{key}` | GET | Find which cache instances hold a specific key |
-| `/api/v1/content/nearest/{key}` | GET | Find the nearest cache instance holding a key (requires source instance ID) |
-| `/api/v1/content/instances/{id}/keys` | GET | List all keys held by a specific cache instance |
-| `/api/v1/content/instances/{id}/keys` | POST | Bulk update keys for a cache instance |
+| `/v1/content/locate/{key}` | GET | Find which cache instances hold a specific key |
+| `/v1/content/nearest/{key}` | GET | Find the nearest cache instance holding a key (requires source instance ID) |
+| `/v1/content/instances/{id}/keys` | GET | List all keys held by a specific cache instance |
+| `/v1/content/instances/{id}/keys` | POST | Bulk update keys for a cache instance |
 
 #### Topology APIs
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/topology` | GET | Get the full cache topology graph |
-| `/api/v1/topology/proximity` | GET | Get proximity matrix between cache instances |
-| `/api/v1/topology/routes/{from}/{to}` | GET | Get optimal route between two cache instances |
+| `/v1/topology` | GET | Get the full cache topology graph |
+| `/v1/topology/proximity` | GET | Get proximity matrix between cache instances |
+| `/v1/topology/routes/{from}/{to}` | GET | Get optimal route between two cache instances |
 
-#### Event Ingestion
+#### Event APIs
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/events` | POST | Submit cache change events (additions, evictions) |
-| `/api/v1/events/stream` | WebSocket | Real-time event stream subscription |
-
-#### gRPC Services
-
-For high-throughput, low-latency operations, the control plane also exposes gRPC services:
-
-```protobuf
-service CacheControlPlane {
-  // Content location - hot path, must be fast
-  rpc LocateKey(LocateKeyRequest) returns (LocateKeyResponse);
-  rpc FindNearestSource(NearestSourceRequest) returns (NearestSourceResponse);
-  
-  // Event ingestion - high throughput
-  rpc SubmitEvents(stream CacheEvent) returns (EventAck);
-  
-  // Instance management
-  rpc RegisterInstance(RegisterRequest) returns (RegisterResponse);
-  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
-}
-```
+| `/v1/events` | POST | Submit cache change events (additions, evictions) |
+| `/v1/events/batch` | POST | Submit multiple events in a single request for high-throughput scenarios |
+| `/v1/events/stream` | WebSocket | Real-time event stream subscription |
 
 ### Storage Architecture
 

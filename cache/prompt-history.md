@@ -38,3 +38,13 @@ Explain that this local, regional, root setup is just one possible example of ho
 - Prompt:
 
 Add a new section to the end of the README on what the architecture of the cache control plane looks like. Include details of its API, what it uses for in memory storage (valkey) and how it handles persistent storage. How it behaves in the event of the control plane being completely restarted. where persistent data is held (postgres)
+
+## 2026-01-29T09:48
+- Model: Clause Opus 4.5
+- Context: None
+- Harness: VS Code
+- Prompt:
+
+change the details on the control plane so that it uses only a REST API, not gRPC.
+
+change the REST API so it is not prefixed by /api
