@@ -48,3 +48,11 @@ Add a new section to the end of the README on what the architecture of the cache
 change the details on the control plane so that it uses only a REST API, not gRPC.
 
 change the REST API so it is not prefixed by /api
+
+## 2026-01-29T10:03
+- Model: Clause Opus 4.5
+- Context: README.md
+- Harness: VS Code
+- Prompt:
+
+create a proper Open API spec for the control plane instead of just having it in the README

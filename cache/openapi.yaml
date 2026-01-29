@@ -1,0 +1,986 @@
+openapi: 3.1.0
+info:
+  title: HAL Cache Control Plane API
+  description: |
+    The Cache Control Plane API provides coordination services for the HAL distributed caching layer.
+    It maintains a complete view of the cache topology, tracks which data is available in each cache
+    instance, and enables optimal routing for cache misses.
+  version: 1.0.0
+  license:
+    name: See LICENSE file
+    url: https://github.com/HMXLabs/hal/blob/main/LICENSE
+  contact:
+    name: HMX Labs
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://cache-control.hal.example.com
+    description: Production server
+
+tags:
+  - name: Instances
+    description: Cache instance registration and management
+  - name: Content
+    description: Content map and key location services
+  - name: Topology
+    description: Cache topology and routing information
+  - name: Events
+    description: Cache event ingestion and streaming
+
+paths:
+  /v1/instances:
+    get:
+      tags:
+        - Instances
+      summary: List all cache instances
+      description: Returns a list of all registered cache instances with their current status
+      operationId: listInstances
+      parameters:
+        - name: status
+          in: query
+          description: Filter by instance status
+          schema:
+            type: string
+            enum: [active, inactive, unverified]
+        - name: region
+          in: query
+          description: Filter by region
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of cache instances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  instances:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CacheInstance'
+                  total:
+                    type: integer
+                    description: Total number of instances
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/instances/{id}:
+    get:
+      tags:
+        - Instances
+      summary: Get cache instance details
+      description: Returns detailed information about a specific cache instance
+      operationId: getInstance
+      parameters:
+        - $ref: '#/components/parameters/InstanceId'
+      responses:
+        '200':
+          description: Cache instance details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheInstanceDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/instances/{id}/register:
+    post:
+      tags:
+        - Instances
+      summary: Register a cache instance
+      description: |
+        Registers a new cache instance with the control plane. The instance must provide
+        its configuration including its parent in the cache hierarchy.
+      operationId: registerInstance
+      parameters:
+        - $ref: '#/components/parameters/InstanceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInstanceRequest'
+      responses:
+        '201':
+          description: Instance registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterInstanceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Instance already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/instances/{id}/heartbeat:
+    post:
+      tags:
+        - Instances
+      summary: Send instance heartbeat
+      description: |
+        Cache instances must send periodic heartbeats to indicate they are healthy.
+        The heartbeat includes current health metrics and resource usage.
+      operationId: instanceHeartbeat
+      parameters:
+        - $ref: '#/components/parameters/InstanceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeartbeatRequest'
+      responses:
+        '200':
+          description: Heartbeat acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/instances/{id}/deregister:
+    delete:
+      tags:
+        - Instances
+      summary: Deregister a cache instance
+      description: |
+        Removes a cache instance from the control plane. This should be called during
+        graceful shutdown. The control plane will update the content map to reflect
+        that data is no longer available at this instance.
+      operationId: deregisterInstance
+      parameters:
+        - $ref: '#/components/parameters/InstanceId'
+      responses:
+        '204':
+          description: Instance deregistered successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/content/locate/{key}:
+    get:
+      tags:
+        - Content
+      summary: Locate instances holding a key
+      description: |
+        Returns a list of all cache instances that currently hold the specified key.
+        Results are ordered by proximity to the requesting instance if sourceInstanceId is provided.
+      operationId: locateKey
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: The cache key to locate
+          schema:
+            type: string
+        - name: sourceInstanceId
+          in: query
+          description: The instance requesting the location (used for proximity ordering)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of instances holding the key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocateKeyResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/content/nearest/{key}:
+    get:
+      tags:
+        - Content
+      summary: Find nearest instance holding a key
+      description: |
+        Returns the single nearest cache instance that holds the specified key,
+        optimized by network latency, bandwidth, and cost from the source instance.
+      operationId: findNearestSource
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: The cache key to locate
+          schema:
+            type: string
+        - name: sourceInstanceId
+          in: query
+          required: true
+          description: The instance requesting the data
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Nearest instance holding the key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearestSourceResponse'
+        '404':
+          description: Key not found in any cache instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/content/instances/{id}/keys:
+    get:
+      tags:
+        - Content
+      summary: List keys in a cache instance
+      description: Returns all keys currently held by the specified cache instance
+      operationId: listInstanceKeys
+      parameters:
+        - $ref: '#/components/parameters/InstanceId'
+        - name: cursor
+          in: query
+          description: Pagination cursor for large key sets
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of keys to return
+          schema:
+            type: integer
+            default: 1000
+            maximum: 10000
+      responses:
+        '200':
+          description: List of keys in the instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Content
+      summary: Bulk update keys for an instance
+      description: |
+        Updates the content map with a full or partial inventory of keys held by an instance.
+        Used during instance registration or periodic reconciliation.
+      operationId: updateInstanceKeys
+      parameters:
+        - $ref: '#/components/parameters/InstanceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyUpdateRequest'
+      responses:
+        '200':
+          description: Keys updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyUpdateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/topology:
+    get:
+      tags:
+        - Topology
+      summary: Get cache topology
+      description: Returns the full cache topology graph showing all instances and their relationships
+      operationId: getTopology
+      responses:
+        '200':
+          description: Cache topology graph
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopologyGraph'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/topology/proximity:
+    get:
+      tags:
+        - Topology
+      summary: Get proximity matrix
+      description: |
+        Returns the proximity matrix showing latency, bandwidth, and cost metrics
+        between all cache instances.
+      operationId: getProximityMatrix
+      parameters:
+        - name: instanceIds
+          in: query
+          description: Filter to specific instances (comma-separated)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Proximity matrix
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProximityMatrix'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/topology/routes/{from}/{to}:
+    get:
+      tags:
+        - Topology
+      summary: Get optimal route between instances
+      description: |
+        Returns the optimal route for data transfer between two cache instances,
+        considering latency, bandwidth, and cost.
+      operationId: getRoute
+      parameters:
+        - name: from
+          in: path
+          required: true
+          description: Source instance ID
+          schema:
+            type: string
+        - name: to
+          in: path
+          required: true
+          description: Destination instance ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Optimal route
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '404':
+          description: One or both instances not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/events:
+    post:
+      tags:
+        - Events
+      summary: Submit cache event
+      description: |
+        Submit a single cache change event (key addition, modification, or eviction).
+        For high-throughput scenarios, use the batch endpoint instead.
+      operationId: submitEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CacheEvent'
+      responses:
+        '202':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/events/batch:
+    post:
+      tags:
+        - Events
+      summary: Submit batch of cache events
+      description: |
+        Submit multiple cache change events in a single request.
+        Optimized for high-throughput scenarios where many keys change rapidly.
+      operationId: submitEventBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CacheEventBatch'
+      responses:
+        '202':
+          description: Events accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    InstanceId:
+      name: id
+      in: path
+      required: true
+      description: Unique identifier for the cache instance
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9_-]+$'
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+    CacheInstance:
+      type: object
+      required:
+        - id
+        - status
+        - address
+      properties:
+        id:
+          type: string
+          description: Unique instance identifier
+        status:
+          type: string
+          enum: [active, inactive, unverified]
+          description: Current instance status
+        address:
+          type: string
+          description: Network address of the instance (host:port)
+        region:
+          type: string
+          description: Geographic or logical region
+        tier:
+          type: string
+          enum: [root, branch, leaf]
+          description: Position in the cache hierarchy
+        parentId:
+          type: string
+          description: ID of the parent cache instance
+        lastHeartbeat:
+          type: string
+          format: date-time
+          description: Timestamp of last heartbeat
+
+    CacheInstanceDetail:
+      allOf:
+        - $ref: '#/components/schemas/CacheInstance'
+        - type: object
+          properties:
+            keyCount:
+              type: integer
+              description: Number of keys currently held
+            totalSize:
+              type: integer
+              format: int64
+              description: Total size of cached data in bytes
+            maxSize:
+              type: integer
+              format: int64
+              description: Maximum cache size in bytes
+            hitRate:
+              type: number
+              format: float
+              description: Cache hit rate (0.0 to 1.0)
+            children:
+              type: array
+              items:
+                type: string
+              description: IDs of child cache instances
+            registeredAt:
+              type: string
+              format: date-time
+              description: When the instance was registered
+
+    RegisterInstanceRequest:
+      type: object
+      required:
+        - address
+        - tier
+      properties:
+        address:
+          type: string
+          description: Network address of the instance (host:port)
+        region:
+          type: string
+          description: Geographic or logical region
+        tier:
+          type: string
+          enum: [root, branch, leaf]
+          description: Position in the cache hierarchy
+        parentId:
+          type: string
+          description: ID of the parent cache instance (required for non-root instances)
+        maxSize:
+          type: integer
+          format: int64
+          description: Maximum cache size in bytes
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional instance metadata
+
+    RegisterInstanceResponse:
+      type: object
+      required:
+        - id
+        - registered
+      properties:
+        id:
+          type: string
+          description: Assigned instance ID
+        registered:
+          type: boolean
+          description: Whether registration was successful
+        controlPlaneVersion:
+          type: string
+          description: Version of the control plane
+
+    HeartbeatRequest:
+      type: object
+      properties:
+        keyCount:
+          type: integer
+          description: Current number of keys held
+        totalSize:
+          type: integer
+          format: int64
+          description: Current total size of cached data
+        hitRate:
+          type: number
+          format: float
+          description: Cache hit rate since last heartbeat
+        cpuUsage:
+          type: number
+          format: float
+          description: CPU usage (0.0 to 1.0)
+        memoryUsage:
+          type: number
+          format: float
+          description: Memory usage (0.0 to 1.0)
+        healthy:
+          type: boolean
+          description: Whether the instance considers itself healthy
+
+    HeartbeatResponse:
+      type: object
+      required:
+        - acknowledged
+      properties:
+        acknowledged:
+          type: boolean
+          description: Whether the heartbeat was acknowledged
+        nextHeartbeatMs:
+          type: integer
+          description: Recommended interval until next heartbeat in milliseconds
+
+    LocateKeyResponse:
+      type: object
+      required:
+        - key
+        - instances
+      properties:
+        key:
+          type: string
+          description: The requested key
+        instances:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyLocation'
+          description: Instances holding the key, ordered by proximity if source specified
+
+    KeyLocation:
+      type: object
+      required:
+        - instanceId
+        - size
+      properties:
+        instanceId:
+          type: string
+          description: ID of the cache instance
+        size:
+          type: integer
+          format: int64
+          description: Size of the cached value in bytes
+        proximity:
+          $ref: '#/components/schemas/ProximityMetrics'
+
+    NearestSourceResponse:
+      type: object
+      required:
+        - key
+        - instanceId
+      properties:
+        key:
+          type: string
+          description: The requested key
+        instanceId:
+          type: string
+          description: ID of the nearest instance holding the key
+        address:
+          type: string
+          description: Network address of the instance
+        size:
+          type: integer
+          format: int64
+          description: Size of the cached value in bytes
+        proximity:
+          $ref: '#/components/schemas/ProximityMetrics'
+
+    ProximityMetrics:
+      type: object
+      properties:
+        latencyMs:
+          type: number
+          format: float
+          description: Network latency in milliseconds
+        bandwidthMbps:
+          type: number
+          format: float
+          description: Available bandwidth in Mbps
+        cost:
+          type: number
+          format: float
+          description: Relative cost factor for data transfer
+
+    KeyListResponse:
+      type: object
+      required:
+        - instanceId
+        - keys
+      properties:
+        instanceId:
+          type: string
+          description: ID of the cache instance
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyInfo'
+          description: List of keys
+        cursor:
+          type: string
+          description: Cursor for next page (null if no more results)
+        total:
+          type: integer
+          description: Total number of keys in the instance
+
+    KeyInfo:
+      type: object
+      required:
+        - key
+        - size
+      properties:
+        key:
+          type: string
+          description: The cache key
+        size:
+          type: integer
+          format: int64
+          description: Size of the value in bytes
+        lastAccessed:
+          type: string
+          format: date-time
+          description: When the key was last accessed
+
+    KeyUpdateRequest:
+      type: object
+      required:
+        - keys
+      properties:
+        mode:
+          type: string
+          enum: [full, partial]
+          default: partial
+          description: |
+            full: Replace entire key inventory
+            partial: Add/update specified keys only
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyInfo'
+          description: Keys to add or update
+
+    KeyUpdateResponse:
+      type: object
+      required:
+        - updated
+      properties:
+        updated:
+          type: integer
+          description: Number of keys updated
+        added:
+          type: integer
+          description: Number of new keys added
+        removed:
+          type: integer
+          description: Number of keys removed (full mode only)
+
+    TopologyGraph:
+      type: object
+      required:
+        - nodes
+        - edges
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyNode'
+          description: Cache instances as nodes
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopologyEdge'
+          description: Connections between instances
+        rootId:
+          type: string
+          description: ID of the root cache instance
+
+    TopologyNode:
+      type: object
+      required:
+        - id
+        - tier
+        - status
+      properties:
+        id:
+          type: string
+          description: Instance ID
+        tier:
+          type: string
+          enum: [root, branch, leaf]
+        status:
+          type: string
+          enum: [active, inactive, unverified]
+        region:
+          type: string
+          description: Geographic or logical region
+        keyCount:
+          type: integer
+          description: Number of keys held
+
+    TopologyEdge:
+      type: object
+      required:
+        - from
+        - to
+        - relationship
+      properties:
+        from:
+          type: string
+          description: Source instance ID
+        to:
+          type: string
+          description: Target instance ID
+        relationship:
+          type: string
+          enum: [parent-child, peer]
+          description: Type of relationship
+        proximity:
+          $ref: '#/components/schemas/ProximityMetrics'
+
+    ProximityMatrix:
+      type: object
+      required:
+        - instances
+        - matrix
+      properties:
+        instances:
+          type: array
+          items:
+            type: string
+          description: Ordered list of instance IDs
+        matrix:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/ProximityMetrics'
+          description: 2D matrix of proximity metrics (row = from, col = to)
+
+    Route:
+      type: object
+      required:
+        - from
+        - to
+        - hops
+      properties:
+        from:
+          type: string
+          description: Source instance ID
+        to:
+          type: string
+          description: Destination instance ID
+        hops:
+          type: array
+          items:
+            type: string
+          description: Ordered list of instance IDs to traverse
+        totalLatencyMs:
+          type: number
+          format: float
+          description: Estimated total latency
+        totalCost:
+          type: number
+          format: float
+          description: Estimated total cost
+
+    CacheEvent:
+      type: object
+      required:
+        - instanceId
+        - eventType
+        - timestamp
+      properties:
+        instanceId:
+          type: string
+          description: ID of the cache instance reporting the event
+        eventType:
+          type: string
+          enum: [key_added, key_updated, key_evicted]
+          description: Type of cache event
+        timestamp:
+          type: string
+          format: date-time
+          description: When the event occurred
+        key:
+          type: string
+          description: The affected cache key
+        size:
+          type: integer
+          format: int64
+          description: Size of the value in bytes (for add/update events)
+        sourceInstanceId:
+          type: string
+          description: Instance from which the data was retrieved (for add events)
+        retrievalTimeMs:
+          type: number
+          format: float
+          description: Time taken to retrieve the data in milliseconds
+
+    CacheEventBatch:
+      type: object
+      required:
+        - instanceId
+        - events
+      properties:
+        instanceId:
+          type: string
+          description: ID of the cache instance reporting the events
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/CacheEventItem'
+          description: Batch of events
+          minItems: 1
+          maxItems: 10000
+
+    CacheEventItem:
+      type: object
+      required:
+        - eventType
+        - timestamp
+        - key
+      properties:
+        eventType:
+          type: string
+          enum: [key_added, key_updated, key_evicted]
+        timestamp:
+          type: string
+          format: date-time
+        key:
+          type: string
+        size:
+          type: integer
+          format: int64
+        sourceInstanceId:
+          type: string
+        retrievalTimeMs:
+          type: number
+          format: float
+
+    EventResponse:
+      type: object
+      required:
+        - accepted
+        - eventId
+      properties:
+        accepted:
+          type: boolean
+          description: Whether the event was accepted
+        eventId:
+          type: string
+          description: Unique identifier for the event
+
+    BatchEventResponse:
+      type: object
+      required:
+        - accepted
+        - count
+      properties:
+        accepted:
+          type: boolean
+          description: Whether the batch was accepted
+        count:
+          type: integer
+          description: Number of events processed
+        batchId:
+          type: string
+          description: Unique identifier for the batch

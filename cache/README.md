@@ -320,42 +320,16 @@ The Cache Control Plane is the central coordination service that maintains a com
 
 ### API
 
-The Cache Control Plane exposes a REST API for all operations:
+The Cache Control Plane exposes a REST API for all operations. The full API specification is available in [openapi.yaml](openapi.yaml).
 
-#### Cache Instance APIs
+#### API Overview
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/instances` | GET | List all registered cache instances |
-| `/v1/instances/{id}` | GET | Get details of a specific cache instance |
-| `/v1/instances/{id}/register` | POST | Register a new cache instance |
-| `/v1/instances/{id}/heartbeat` | POST | Cache instance heartbeat with health status |
-| `/v1/instances/{id}/deregister` | DELETE | Deregister a cache instance |
-
-#### Content Map APIs
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/content/locate/{key}` | GET | Find which cache instances hold a specific key |
-| `/v1/content/nearest/{key}` | GET | Find the nearest cache instance holding a key (requires source instance ID) |
-| `/v1/content/instances/{id}/keys` | GET | List all keys held by a specific cache instance |
-| `/v1/content/instances/{id}/keys` | POST | Bulk update keys for a cache instance |
-
-#### Topology APIs
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/topology` | GET | Get the full cache topology graph |
-| `/v1/topology/proximity` | GET | Get proximity matrix between cache instances |
-| `/v1/topology/routes/{from}/{to}` | GET | Get optimal route between two cache instances |
-
-#### Event APIs
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/events` | POST | Submit cache change events (additions, evictions) |
-| `/v1/events/batch` | POST | Submit multiple events in a single request for high-throughput scenarios |
-| `/v1/events/stream` | WebSocket | Real-time event stream subscription |
+| Category | Endpoints | Description |
+|----------|-----------|-------------|
+| **Instances** | `/v1/instances/*` | Cache instance registration, heartbeat, and management |
+| **Content** | `/v1/content/*` | Key location, nearest source lookup, and content inventory |
+| **Topology** | `/v1/topology/*` | Cache topology graph, proximity matrix, and routing |
+| **Events** | `/v1/events/*` | Cache event ingestion (single and batch) |
 
 ### Storage Architecture
 
