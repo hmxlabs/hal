@@ -1,9 +1,10 @@
-2026-01-29T09:21
-Model: Clause Opus 4.5
-Context: ../README.md
-Harness: VS Code
-Prompt: 
-User: In the cache directory create a readme explaining that this is the caching layer for the HPC scheduler as references in the README.md file.
+## 2026-01-29T09:21
+- Model: Clause Opus 4.5
+- Context: ../README.md
+- Harness: VS Code
+- Prompt: 
+
+In the cache directory create a readme explaining that this is the caching layer for the HPC scheduler as references in the README.md file.
 
 Explain that this cache will:
 
@@ -20,18 +21,20 @@ Write a README doc that explains all of this in the cache directory
 
 Draw a diagram of the cache topology.
 
-2026-01-29T09:31
-Model: Clause Opus 4.5
-Context: None
-Harness: VS Code
-Prompt"
+## 2026-01-29T09:31
+- Model: Clause Opus 4.5
+- Context: None
+- Harness: VS Code
+- Prompt:
+
 Update the data flow example diagram so that it also includes the regional cache having to obtain data from the root cache.
 
 Explain that this local, regional, root setup is just one possible example of how the cache topology might be deployed. It may also be desireable to have a node local cache and a top of rack cache for example.
 
-2026-01-29T09:36
-Model: Clause Opus 4.5
-Context: None
-Harness: VS Code
-Prompt:
+## 2026-01-29T09:36
+- Model: Clause Opus 4.5
+- Context: None
+- Harness: VS Code
+- Prompt:
+
 Add a new section to the end of the README on what the architecture of the cache control plane looks like. Include details of its API, what it uses for in memory storage (valkey) and how it handles persistent storage. How it behaves in the event of the control plane being completely restarted. where persistent data is held (postgres)
