@@ -49,6 +49,52 @@ The cache instances form a **tree topology** where:
    └───────┘     └───────┘   └───────┘   └───────┘   └───────┘   └───────┘
 ```
 
+### Flexible Topology Deployment
+
+The local → regional → root topology shown above is just **one example** of how the cache hierarchy might be deployed. The actual topology should be designed based on your infrastructure's characteristics, including network latency, bandwidth costs, and data access patterns.
+
+**Alternative topology examples:**
+
+| Topology | Use Case |
+|----------|----------|
+| **Node-local → Top-of-Rack → Regional → Root** | High-density HPC clusters where intra-node data sharing is critical |
+| **Node-local → Regional → Root** | Smaller clusters without rack-level aggregation needs |
+| **Pod-local → Availability Zone → Root** | Cloud-native Kubernetes deployments |
+| **Edge → Data Center → Root** | Geographically distributed edge computing scenarios |
+
+For example, in a densely packed HPC environment, you might want:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Root Cache                           │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+            ┌──────────────┴──────────────┐
+            ▼                             ▼
+   ┌─────────────────┐           ┌─────────────────┐
+   │  Regional Cache │           │  Regional Cache │
+   │    (Site A)     │           │    (Site B)     │
+   └────────┬────────┘           └────────┬────────┘
+            │                             │
+     ┌──────┴──────┐               ┌──────┴──────┐
+     ▼             ▼               ▼             ▼
+┌─────────┐   ┌─────────┐     ┌─────────┐   ┌─────────┐
+│Top-of-  │   │Top-of-  │     │Top-of-  │   │Top-of-  │
+│Rack     │   │Rack     │     │Rack     │   │Rack     │
+│Cache    │   │Cache    │     │Cache    │   │Cache    │
+└────┬────┘   └────┬────┘     └────┬────┘   └────┬────┘
+     │             │               │             │
+  ┌──┴──┐       ┌──┴──┐         ┌──┴──┐       ┌──┴──┐
+  ▼     ▼       ▼     ▼         ▼     ▼       ▼     ▼
+┌───┐ ┌───┐   ┌───┐ ┌───┐     ┌───┐ ┌───┐   ┌───┐ ┌───┐
+│N1 │ │N2 │   │N1 │ │N2 │     │N1 │ │N2 │   │N1 │ │N2 │
+│   │ │   │   │   │ │   │     │   │ │   │   │   │ │   │
+└───┘ └───┘   └───┘ └───┘     └───┘ └───┘   └───┘ └───┘
+  Node-Local Caches             Node-Local Caches
+```
+
+The cache control plane supports any tree topology configuration—the key requirement is that data flows from root toward leaves, with each cache instance knowing its parent(s) in the hierarchy.
+
 ### Locality-First Data Access
 
 Clients always interact with their **most local cache instance**. This ensures:
@@ -147,36 +193,69 @@ The HAL Cache is based on a fork of ValKey with the following modifications:
 
 ### Data Flow Example
 
+The following diagram illustrates a complete cache miss scenario where data must be retrieved from the root cache, propagating through the hierarchy:
+
 ```
-┌──────────┐         ┌─────────────┐         ┌─────────────┐         ┌──────────┐
-│  Client  │         │ Local Cache │         │Regional Cache│        │Root Cache│
-│          │         │  (Leaf)     │         │  (Branch)    │        │  (Root)  │
-└────┬─────┘         └──────┬──────┘         └──────┬───────┘        └────┬─────┘
-     │                      │                       │                     │
-     │  GET key:dataset_1   │                       │                     │
-     │─────────────────────►│                       │                     │
-     │                      │                       │                     │
-     │                      │  Cache Miss           │                     │
-     │                      │  Query Control Plane  │                     │
-     │                      │  for nearest source   │                     │
-     │                      │──────────────────────►│                     │
-     │                      │                       │                     │
-     │                      │  Regional has data    │                     │
-     │                      │◄──────────────────────│                     │
-     │                      │                       │                     │
-     │                      │  GET key:dataset_1    │                     │
-     │                      │──────────────────────►│                     │
-     │                      │                       │                     │
-     │                      │       Data            │                     │
-     │                      │◄──────────────────────│                     │
-     │                      │                       │                     │
-     │                      │  Store locally        │                     │
-     │                      │  Notify Control Plane │                     │
-     │                      │                       │                     │
-     │        Data          │                       │                     │
-     │◄─────────────────────│                       │                     │
-     │                      │                       │                     │
+┌──────────┐         ┌─────────────┐         ┌───────────────┐        ┌──────────┐
+│  Client  │         │ Local Cache │         │Regional Cache │        │Root Cache│
+│          │         │   (Leaf)    │         │   (Branch)    │        │  (Root)  │
+└────┬─────┘         └──────┬──────┘         └───────┬───────┘        └────┬─────┘
+     │                      │                        │                     │
+     │  GET key:dataset_1   │                        │                     │
+     │─────────────────────►│                        │                     │
+     │                      │                        │                     │
+     │                      │  Cache Miss            │                     │
+     │                      │  Query Control Plane   │                     │
+     │                      │  for nearest source    │                     │
+     │                      │───────────────────────►│                     │
+     │                      │                        │                     │
+     │                      │  Regional has data     │                     │
+     │                      │◄───────────────────────│                     │
+     │                      │                        │                     │
+     │                      │  GET key:dataset_1     │                     │
+     │                      │───────────────────────►│                     │
+     │                      │                        │                     │
+     │                      │                        │  Cache Miss         │
+     │                      │                        │  Query Control Plane│
+     │                      │                        │  for nearest source │
+     │                      │                        │────────────────────►│
+     │                      │                        │                     │
+     │                      │                        │  Root has data      │
+     │                      │                        │◄────────────────────│
+     │                      │                        │                     │
+     │                      │                        │  GET key:dataset_1  │
+     │                      │                        │────────────────────►│
+     │                      │                        │                     │
+     │                      │                        │        Data         │
+     │                      │                        │◄────────────────────│
+     │                      │                        │                     │
+     │                      │                        │  Store locally      │
+     │                      │                        │  Notify Control Plane
+     │                      │                        │                     │
+     │                      │        Data            │                     │
+     │                      │◄───────────────────────│                     │
+     │                      │                        │                     │
+     │                      │  Store locally         │                     │
+     │                      │  Notify Control Plane  │                     │
+     │                      │                        │                     │
+     │        Data          │                        │                     │
+     │◄─────────────────────│                        │                     │
+     │                      │                        │                     │
 ```
+
+In this example:
+1. The client requests data from its local (leaf) cache
+2. The local cache has a miss and queries the control plane for the nearest source
+3. The control plane indicates the regional cache should have the data
+4. The local cache requests data from the regional cache
+5. The regional cache also has a miss and queries the control plane
+6. The control plane directs it to the root cache
+7. The regional cache fetches from root, stores locally, and notifies the control plane
+8. The regional cache returns data to the local cache
+9. The local cache stores it and notifies the control plane
+10. The data is finally returned to the client
+
+Subsequent requests for `dataset_1` from any client in the same local or regional area will now hit the cache.
 
 ## Integration with HAL Scheduler
 
