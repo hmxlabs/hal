@@ -265,6 +265,261 @@ The Cache Layer is a core component of the HAL Data Plane, enabling:
 - **Predictive Caching**: Based on job submissions and historical patterns, data can be pre-staged to appropriate cache locations
 - **Cost Optimization**: In hybrid environments, the cache layer helps minimize expensive cross-network data transfers
 
+## Cache Control Plane Architecture
+
+The Cache Control Plane is the central coordination service that maintains a complete view of the distributed cache system. It is designed for high availability, low latency queries, and durability of critical metadata.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Cache Control Plane                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                          REST / gRPC API                             │    │
+│  └──────────────────────────────┬──────────────────────────────────────┘    │
+│                                 │                                            │
+│  ┌──────────────────────────────┴──────────────────────────────────────┐    │
+│  │                        Service Layer                                 │    │
+│  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────┐ │    │
+│  │  │ Content Map    │  │   Topology     │  │   Analytics &          │ │    │
+│  │  │ Service        │  │   Service      │  │   Metrics Service      │ │    │
+│  │  └────────────────┘  └────────────────┘  └────────────────────────┘ │    │
+│  └──────────────────────────────┬──────────────────────────────────────┘    │
+│                                 │                                            │
+│  ┌──────────────────────────────┴──────────────────────────────────────┐    │
+│  │                        Storage Layer                                 │    │
+│  │                                                                      │    │
+│  │    ┌─────────────────────┐         ┌─────────────────────────┐      │    │
+│  │    │   ValKey (In-Memory)│         │   PostgreSQL (Durable)  │      │    │
+│  │    │                     │         │                         │      │    │
+│  │    │ • Content Map       │         │ • Cache Instance        │      │    │
+│  │    │ • Real-time State   │◄───────►│   Registry              │      │    │
+│  │    │ • Hot Path Queries  │  Sync   │ • Topology Config       │      │    │
+│  │    │ • Session Data      │         │ • Historical Metrics    │      │    │
+│  │    │                     │         │ • Event Log (WAL)       │      │    │
+│  │    └─────────────────────┘         └─────────────────────────┘      │    │
+│  │                                                                      │    │
+│  └──────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                     Event Ingestion (Pub/Sub)                         │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+         ┌──────────────────────────┼──────────────────────────┐
+         │                          │                          │
+         ▼                          ▼                          ▼
+    ┌─────────┐                ┌─────────┐                ┌─────────┐
+    │ Cache   │                │ Cache   │                │ Cache   │
+    │Instance │                │Instance │                │Instance │
+    └─────────┘                └─────────┘                └─────────┘
+```
+
+### API
+
+The Cache Control Plane exposes both REST and gRPC APIs for different use cases:
+
+#### Cache Instance APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/instances` | GET | List all registered cache instances |
+| `/api/v1/instances/{id}` | GET | Get details of a specific cache instance |
+| `/api/v1/instances/{id}/register` | POST | Register a new cache instance |
+| `/api/v1/instances/{id}/heartbeat` | POST | Cache instance heartbeat with health status |
+| `/api/v1/instances/{id}/deregister` | DELETE | Deregister a cache instance |
+
+#### Content Map APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/content/locate/{key}` | GET | Find which cache instances hold a specific key |
+| `/api/v1/content/nearest/{key}` | GET | Find the nearest cache instance holding a key (requires source instance ID) |
+| `/api/v1/content/instances/{id}/keys` | GET | List all keys held by a specific cache instance |
+| `/api/v1/content/instances/{id}/keys` | POST | Bulk update keys for a cache instance |
+
+#### Topology APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/topology` | GET | Get the full cache topology graph |
+| `/api/v1/topology/proximity` | GET | Get proximity matrix between cache instances |
+| `/api/v1/topology/routes/{from}/{to}` | GET | Get optimal route between two cache instances |
+
+#### Event Ingestion
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/events` | POST | Submit cache change events (additions, evictions) |
+| `/api/v1/events/stream` | WebSocket | Real-time event stream subscription |
+
+#### gRPC Services
+
+For high-throughput, low-latency operations, the control plane also exposes gRPC services:
+
+```protobuf
+service CacheControlPlane {
+  // Content location - hot path, must be fast
+  rpc LocateKey(LocateKeyRequest) returns (LocateKeyResponse);
+  rpc FindNearestSource(NearestSourceRequest) returns (NearestSourceResponse);
+  
+  // Event ingestion - high throughput
+  rpc SubmitEvents(stream CacheEvent) returns (EventAck);
+  
+  // Instance management
+  rpc RegisterInstance(RegisterRequest) returns (RegisterResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+}
+```
+
+### Storage Architecture
+
+The control plane uses a dual-storage architecture optimized for both performance and durability:
+
+#### In-Memory Storage (ValKey)
+
+ValKey serves as the primary hot storage for real-time operations:
+
+| Data Type | Purpose | TTL |
+|-----------|---------|-----|
+| **Content Map** | Which keys exist in which cache instances | Updated on events |
+| **Key Sizes** | Size of data for each key in each instance | Updated on events |
+| **Instance State** | Current health/status of each cache instance | Refreshed on heartbeat |
+| **Proximity Cache** | Pre-computed nearest-neighbor lookups | 60 seconds |
+| **Session Data** | Active client sessions and subscriptions | Session-based |
+
+ValKey provides:
+- Sub-millisecond query latency for key location lookups
+- Atomic operations for content map updates
+- Pub/Sub for real-time event distribution to subscribers
+- Sorted sets for efficient proximity-based queries
+
+#### Persistent Storage (PostgreSQL)
+
+PostgreSQL provides durable storage for configuration and historical data:
+
+| Table | Purpose |
+|-------|---------|
+| `cache_instances` | Registry of all cache instances with configuration |
+| `topology_edges` | Network topology graph (latency, bandwidth, cost between instances) |
+| `topology_config` | Topology configuration and hierarchy definitions |
+| `event_log` | Append-only log of all cache events (WAL-style) |
+| `metrics_hourly` | Aggregated metrics (hit rates, retrieval times, etc.) |
+| `metrics_daily` | Daily rollup of metrics for long-term analysis |
+
+PostgreSQL provides:
+- ACID guarantees for configuration changes
+- Point-in-time recovery capability
+- Rich querying for analytics and reporting
+- Reliable storage for audit and compliance requirements
+
+### Synchronization
+
+The control plane maintains consistency between ValKey and PostgreSQL:
+
+1. **Write Path**: Events are first written to ValKey for immediate availability, then asynchronously persisted to PostgreSQL's event log
+2. **Read Path**: Hot queries (key location, proximity) are served from ValKey; cold queries (historical analytics, configuration) are served from PostgreSQL
+3. **Consistency**: The event log in PostgreSQL serves as the source of truth; ValKey state can be rebuilt from it
+
+### Recovery and Restart Behavior
+
+The control plane is designed to recover gracefully from complete restarts:
+
+#### Startup Sequence
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Control Plane Startup                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  1. Connect to PostgreSQL                                            │
+│     └─► Verify schema, run migrations if needed                      │
+│                                                                      │
+│  2. Connect to ValKey                                                │
+│     └─► Flush stale data (previous session)                          │
+│                                                                      │
+│  3. Load Topology Configuration                                      │
+│     └─► Read cache_instances and topology_edges from PostgreSQL      │
+│     └─► Populate topology graph in ValKey                            │
+│                                                                      │
+│  4. Rebuild Content Map (Two Strategies)                             │
+│     │                                                                │
+│     ├─► Strategy A: Passive Rebuild                                  │
+│     │   • Mark all instances as "unverified"                         │
+│     │   • Wait for cache instances to re-register and report keys    │
+│     │   • Instances send full key inventory on reconnection          │
+│     │                                                                │
+│     └─► Strategy B: Active Rebuild                                   │
+│         • Query each cache instance's Content Inventory API          │
+│         • Populate content map from responses                        │
+│         • Faster but requires all instances to be reachable          │
+│                                                                      │
+│  5. Begin Accepting Requests                                         │
+│     └─► Start API servers (REST, gRPC, WebSocket)                    │
+│     └─► Resume event ingestion                                       │
+│                                                                      │
+│  6. Replay Recent Events (Optional)                                  │
+│     └─► Process any events from event_log that occurred during       │
+│         downtime (if cache instances buffered them)                  │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### During Recovery
+
+While the control plane is recovering:
+
+- **Cache instances continue to operate** - They can serve local cache hits and queue events for later submission
+- **Cache misses may be slower** - Without the control plane, instances fall back to querying their configured parent directly rather than finding the optimal source
+- **Events are buffered** - Cache instances buffer change events locally and submit them when the control plane becomes available
+
+#### Data Guarantees
+
+| Data Type | Recovery Source | Potential Data Loss |
+|-----------|-----------------|---------------------|
+| Cache instance registry | PostgreSQL | None |
+| Topology configuration | PostgreSQL | None |
+| Content map (current keys) | Cache instances | None (rebuilt from instances) |
+| Historical metrics | PostgreSQL | None |
+| In-flight events | Event buffer on instances | Minimal (depends on buffer size) |
+
+### High Availability Deployment
+
+For production deployments, the control plane supports high availability:
+
+```
+                    ┌─────────────────────┐
+                    │   Load Balancer     │
+                    └──────────┬──────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+          ▼                    ▼                    ▼
+   ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+   │ Control     │      │ Control     │      │ Control     │
+   │ Plane       │      │ Plane       │      │ Plane       │
+   │ Instance 1  │      │ Instance 2  │      │ Instance 3  │
+   └──────┬──────┘      └──────┬──────┘      └──────┬──────┘
+          │                    │                    │
+          └────────────────────┼────────────────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+          ▼                    ▼                    ▼
+   ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+   │   ValKey    │      │   ValKey    │      │ PostgreSQL  │
+   │   Primary   │◄────►│   Replica   │      │  (Primary)  │
+   └─────────────┘      └─────────────┘      └─────────────┘
+```
+
+- Multiple control plane instances behind a load balancer
+- ValKey configured with replication for read scaling and failover
+- PostgreSQL with streaming replication for durability
+- Stateless control plane instances enable horizontal scaling
+
 ## License
 
 See [LICENSE](../LICENSE) for details.
