@@ -1,6 +1,7 @@
 # HAL Cache Control Plane Test Matrix
 
 This matrix is derived from `cache/openapi.yaml` and is the executable checklist for `cache/tests.md`.
+It covers control-plane API behavior only; end-to-end cache data propagation scenarios are tracked in `cache/cache-usage-test-matrix.md`.
 
 ## Legend
 

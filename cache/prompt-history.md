@@ -75,3 +75,9 @@ create implementations of the tests based on these documents
 what other test frameworks are available to use? The ruby tests are not great. Ideally something that uses a simple HTTPi or Curl based mechanism to test the cache control plane.
 
 hurl is available. Use this and rewrite the tests.
+
+these test only cover the cache control API. 
+
+They do not validate the possible usage scenarios of the cache it self. For example, writing data to the root node and then requesting that data from a leaf node and then validating that the data was propagated to the leaf node and the relevant APIs called on the cache control plane REST API.
+Determine all possible mutations of these types of test and create a test matrix for these
+

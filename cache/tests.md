@@ -135,4 +135,5 @@ The component passes when:
 
 - Automated test suite grouped by contract, endpoint, integration, resilience, and performance categories
 - Executable CI job producing test report artifacts
-- This specification plus `cache/test-matrix.md` as the case-level matrix
+- This specification plus `cache/test-matrix.md` as the control-plane API case matrix
+- `cache/cache-usage-test-matrix.md` as the end-to-end cache behavior and propagation matrix
