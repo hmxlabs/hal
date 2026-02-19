@@ -1,48 +1,64 @@
-# Cache Test Implementation
+# Cache Control Plane Tests (Hurl + Curl)
 
-Implemented test suites derived from `cache/tests.md` and `cache/test-matrix.md`.
+This test implementation is based on:
 
-## Files
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests.md`
+- `/Volumes/My Shared Files/DevBox/hal/cache/test-matrix.md`
 
-- `cache/tests/contract_test.rb`
-- `cache/tests/endpoint_test.rb`
-- `cache/tests/integration_test.rb`
-- `cache/tests/resilience_test.rb`
-- `cache/tests/performance_test.rb`
-- `cache/tests/test_helper.rb`
-- `cache/tests/all_tests.rb`
+Framework and tooling:
+
+- `hurl` for HTTP request/response test flows
+- `curl` + `jq` for supplemental checks (edge cases and performance loops)
+- `bash` runner script
+
+## Test files
+
+Hurl suites:
+
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/hurl/01-instances.hurl`
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/hurl/02-content.hurl`
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/hurl/03-topology.hurl`
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/hurl/04-events.hurl`
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/hurl/05-integration.hurl`
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/hurl/06-resilience-setup.hurl`
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/hurl/07-resilience-verify.hurl`
+
+Runner:
+
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/run-tests.sh`
 
 ## Run
 
-```bash
-ruby cache/tests/all_tests.rb
-```
-
-Or use the runner script:
+Contract checks only:
 
 ```bash
-bash cache/tests/run-tests.sh
+bash /Volumes/My\ Shared\ Files/DevBox/hal/cache/tests/run-tests.sh --contract-only
 ```
 
-## Environment variables
+Endpoint + integration + supplemental checks:
 
-- `CACHE_API_BASE_URL`: base URL for API-backed tests (for example, `http://localhost:8080`).
-- `CACHE_API_INSECURE=1`: disable TLS verification for self-signed HTTPS endpoints.
-- `CACHE_HTTP_OPEN_TIMEOUT`: optional open timeout seconds (default `5`).
-- `CACHE_HTTP_READ_TIMEOUT`: optional read timeout seconds (default `20`).
+```bash
+bash /Volumes/My\ Shared\ Files/DevBox/hal/cache/tests/run-tests.sh --base-url http://localhost:8080
+```
 
-Resilience tests:
+Include resilience checks:
 
-- `CACHE_API_RESTART_CMD`: shell command to restart control plane process/service.
-- `CACHE_RECOVERY_TIMEOUT`: seconds to wait for API recovery (default `60`).
+```bash
+bash /Volumes/My\ Shared\ Files/DevBox/hal/cache/tests/run-tests.sh \
+  --base-url http://localhost:8080 \
+  --with-resilience "docker compose restart cache-control-plane"
+```
 
-Performance tests (opt-in):
+Include performance checks:
 
-- `CACHE_ENABLE_PERF=1`
-- `CACHE_PERF_BATCH_SIZE` (default `100`)
-- `CACHE_PERF_ROUNDS` (default `20`)
-- `CACHE_PERF_MIN_EVENTS_PER_SEC` (default `100.0`)
-- `CACHE_PERF_LOOKUP_ITERATIONS` (default `100`)
-- `CACHE_PERF_NEAREST_P95_MS` (default `200.0`)
-- `CACHE_PERF_ROUTE_ITERATIONS` (default `100`)
-- `CACHE_PERF_ROUTE_P95_MS` (default `250.0`)
+```bash
+bash /Volumes/My\ Shared\ Files/DevBox/hal/cache/tests/run-tests.sh \
+  --base-url http://localhost:8080 \
+  --with-perf
+```
+
+## Notes
+
+- The runner generates a unique test prefix for every run to avoid ID collisions.
+- Resilience tests run only when `--with-resilience` is provided.
+- Performance tests run only when `--with-perf` is provided.

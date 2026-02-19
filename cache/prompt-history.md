@@ -71,3 +71,7 @@ gRPC references are old and should be removed. Use the OpenAPI specification ove
 Write the test specifications as decribed above in a tests.md file and then create the test-matrix.md file.
 
 create implementations of the tests based on these documents
+
+what other test frameworks are available to use? The ruby tests are not great. Ideally something that uses a simple HTTPi or Curl based mechanism to test the cache control plane.
+
+hurl is available. Use this and rewrite the tests.
