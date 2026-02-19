@@ -254,7 +254,7 @@ Every component in HAL is accessed through well-defined interfaces:
 ┌──────────────────────────────────────────────────────────────────┐
 │                      Component Interface                          │
 ├──────────────────────────────────────────────────────────────────┤
-│  • OpenAPI/gRPC specifications for all APIs                      │
+│  • OpenAPI specifications for all APIs                           │
 │  • Pluggable implementations (swap any component)                │
 │  • Contract testing ensures compatibility                         │
 │  • Version negotiation for backward compatibility                │

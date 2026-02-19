@@ -277,7 +277,7 @@ The Cache Control Plane is the central coordination service that maintains a com
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                          REST / gRPC API                             │    │
+│  │                            REST API                                  │    │
 │  └──────────────────────────────┬──────────────────────────────────────┘    │
 │                                 │                                            │
 │  ┌──────────────────────────────┴──────────────────────────────────────┐    │
@@ -414,7 +414,7 @@ The control plane is designed to recover gracefully from complete restarts:
 │         • Faster but requires all instances to be reachable          │
 │                                                                      │
 │  5. Begin Accepting Requests                                         │
-│     └─► Start API servers (REST, gRPC, WebSocket)                    │
+│     └─► Start API servers (REST, WebSocket)                          │
 │     └─► Resume event ingestion                                       │
 │                                                                      │
 │  6. Replay Recent Events (Optional)                                  │

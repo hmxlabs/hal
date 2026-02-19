@@ -56,3 +56,16 @@ change the REST API so it is not prefixed by /api
 - Prompt:
 
 create a proper Open API spec for the control plane instead of just having it in the README
+
+## 2026-02-19T14:21
+- Model: GPT 5.3-Codex High
+- Context: 
+- Harness: Codex Mac
+- Prompt:
+Check the cache directory and read the documentation to understand the requirements for the cache component.
+
+Propose how this component can be tested
+
+gRPC references are old and should be removed. Use the OpenAPI specification over the readme file.
+
+Write the test specifications as decribed above in a tests.md file and then create the test-matrix.md file.
