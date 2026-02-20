@@ -15,6 +15,7 @@ Usage-scenario framework (Option 2):
 
 - Python runner that uses `valkey-cli` or `redis-cli` for cache data-plane operations
 - REST calls to the control plane for propagation/state assertions
+- Implements `USE-001`..`USE-040` from `cache/cache-usage-test-matrix.md`
 - See `/Volumes/My Shared Files/DevBox/hal/cache/tests/python/README.md`
 
 ## Test files

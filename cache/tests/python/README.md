@@ -11,11 +11,9 @@ Source matrix:
 
 ## Implemented scenarios
 
-Currently implemented:
+Implemented:
 
-- `USE-001` to `USE-006` (core P0 propagation scenarios)
-
-The scenario catalog includes all `USE-*` IDs and marks unimplemented ones.
+- `USE-001` to `USE-040`
 
 ## List scenarios
 
@@ -31,6 +29,17 @@ python3 /Volumes/My\ Shared\ Files/DevBox/hal/cache/tests/python/run_usage_tests
   --root-id root-us-east --root-host 127.0.0.1 --root-port 6379 \
   --branch-id branch-us-west --branch-host 127.0.0.1 --branch-port 6380 \
   --leaf-id leaf-us-west-1 --leaf-host 127.0.0.1 --leaf-port 6381
+```
+
+Tip: running all 40 scenarios by default is broad. For a quick pass, run only P0:
+
+```bash
+python3 /Volumes/My\ Shared\ Files/DevBox/hal/cache/tests/python/run_usage_tests.py \
+  --control-plane-url http://localhost:8080 \
+  --root-id root-us-east --root-host 127.0.0.1 --root-port 6379 \
+  --branch-id branch-us-west --branch-host 127.0.0.1 --branch-port 6380 \
+  --leaf-id leaf-us-west-1 --leaf-host 127.0.0.1 --leaf-port 6381 \
+  --priority P0
 ```
 
 ## Run specific scenarios
@@ -50,3 +59,10 @@ python3 /Volumes/My\ Shared\ Files/DevBox/hal/cache/tests/python/run_usage_tests
 - The runner assumes cache nodes are already configured with hierarchy behavior.
 - It does not mock the cache itself.
 - For authenticated nodes, add `--redis-user` and `--redis-password`.
+- Fault/restart mutation scenarios use optional hook commands:
+  - `--source-down-cmd`, `--source-up-cmd`
+  - `--intermediate-down-cmd`, `--intermediate-up-cmd`
+  - `--control-plane-down-cmd`, `--control-plane-up-cmd`
+  - `--control-plane-restart-cmd`
+  - `--requester-restart-cmd`
+- If hooks are omitted, the runner executes soft-mode fallbacks unless `--strict-hooks` is set.
