@@ -16,7 +16,7 @@ Content-Type: application/json
   "instanceId": "{{test_prefix}}_evt_root",
   "eventType": "key_added",
   "timestamp": "2026-01-01T00:00:00Z",
-  "key": "dataset_imagenet_v1",
+  "key": "dataset:imagenet:v1",
   "size": 100,
   "sourceInstanceId": "{{test_prefix}}_evt_root",
   "retrievalTimeMs": 1.2
@@ -32,7 +32,7 @@ Content-Type: application/json
   "instanceId": "{{test_prefix}}_evt_root",
   "eventType": "key_removed",
   "timestamp": "2026-01-01T00:00:00Z",
-  "key": "dataset_imagenet_v1"
+  "key": "dataset:imagenet:v1"
 }
 HTTP 400
 [Asserts]

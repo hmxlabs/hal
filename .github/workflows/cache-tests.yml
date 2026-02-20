@@ -1,0 +1,25 @@
+name: Cache Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  contract:
+    name: Contract Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run cache contract checks
+        run: |
+          bash cache/tests/run-tests.sh --contract-only | tee cache-contract-report.txt
+
+      - name: Upload contract report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-contract-report
+          path: cache-contract-report.txt

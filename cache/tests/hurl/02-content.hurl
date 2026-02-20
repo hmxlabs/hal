@@ -38,12 +38,12 @@ Content-Type: application/json
   "mode": "partial",
   "keys": [
     {
-      "key": "dataset_imagenet_v1",
+      "key": "dataset:imagenet:v1",
       "size": 1000,
       "lastAccessed": "2026-01-01T00:00:00Z"
     },
     {
-      "key": "dataset_llama2_tokenizer",
+      "key": "dataset:llama2-tokenizer",
       "size": 2000,
       "lastAccessed": "2026-01-01T00:00:00Z"
     }
@@ -60,7 +60,7 @@ Content-Type: application/json
   "mode": "full",
   "keys": [
     {
-      "key": "checkpoint_resnet50_epoch10",
+      "key": "checkpoint:resnet50:epoch10",
       "size": 3000,
       "lastAccessed": "2026-01-01T00:00:00Z"
     }
@@ -77,7 +77,7 @@ Content-Type: application/json
   "mode": "partial",
   "keys": [
     {
-      "key": "checkpoint_resnet50_epoch10",
+      "key": "checkpoint:resnet50:epoch10",
       "size": 3000,
       "lastAccessed": "2026-01-01T00:00:00Z"
     }
@@ -98,24 +98,24 @@ HTTP 200
 jsonpath "$.instanceId" == "{{test_prefix}}_cnt_root"
 jsonpath "$.keys" exists
 
-GET {{base_url}}/v1/content/locate/checkpoint_resnet50_epoch10
+GET {{base_url}}/v1/content/locate/checkpoint%3Aresnet50%3Aepoch10
 HTTP 200
 [Asserts]
-jsonpath "$.key" == "checkpoint_resnet50_epoch10"
+jsonpath "$.key" == "checkpoint:resnet50:epoch10"
 jsonpath "$.instances" exists
 
-GET {{base_url}}/v1/content/locate/checkpoint_resnet50_epoch10?sourceInstanceId={{test_prefix}}_cnt_leaf
+GET {{base_url}}/v1/content/locate/checkpoint%3Aresnet50%3Aepoch10?sourceInstanceId={{test_prefix}}_cnt_leaf
 HTTP 200
 [Asserts]
 jsonpath "$.instances" exists
 
-GET {{base_url}}/v1/content/nearest/checkpoint_resnet50_epoch10?sourceInstanceId={{test_prefix}}_cnt_leaf
+GET {{base_url}}/v1/content/nearest/checkpoint%3Aresnet50%3Aepoch10?sourceInstanceId={{test_prefix}}_cnt_leaf
 HTTP 200
 [Asserts]
-jsonpath "$.key" == "checkpoint_resnet50_epoch10"
+jsonpath "$.key" == "checkpoint:resnet50:epoch10"
 jsonpath "$.instanceId" exists
 
-GET {{base_url}}/v1/content/nearest/checkpoint_resnet50_epoch10
+GET {{base_url}}/v1/content/nearest/checkpoint%3Aresnet50%3Aepoch10
 HTTP 400
 [Asserts]
 jsonpath "$.code" exists

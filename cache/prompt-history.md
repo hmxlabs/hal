@@ -93,3 +93,9 @@ implement all use cases
 Read the specifications of the cache component. Compare these specifications to see where they diverge with the test implementations present.
 
 Create a report of where these diverge
+
+Correct these errors in the test divergence report
+
+Correct these errors in the test divergence report
+
+Make changes to the test code to resolve the divergence

@@ -367,7 +367,24 @@ def use_001(ctx: ScenarioContext) -> None:
     key = ctx.key("use001")
     value = ctx.value("use001")
 
-    prime_leaf_from_root(ctx, key, value)
+    ctx.clear_key_all(key)
+    ctx.redis.set(ctx.root, key, value)
+
+    ctx.wait_until(
+        lambda: ctx.cp.nearest(key, ctx.leaf.instance_id)[0] == 200,
+        "USE-001 nearest lookup from leaf did not become available",
+    )
+    nearest_status, nearest_payload = ctx.cp.nearest(key, ctx.leaf.instance_id)
+    assert_status(nearest_status, 200, "USE-001 nearest")
+    assert_true(isinstance(nearest_payload, dict), "USE-001 nearest payload must be object")
+    nearest_source = nearest_payload.get("instanceId")
+    assert_true(
+        nearest_source in {ctx.root.instance_id, ctx.branch.instance_id},
+        f"USE-001 expected upstream source, got {nearest_source!r}",
+    )
+
+    got = ctx.redis.get(ctx.leaf, key)
+    assert_true(got == value, f"USE-001 expected leaf read to return {value!r}, got {got!r}")
     assert_true(ctx.redis.exists(ctx.leaf, key), "USE-001 expected key cached on leaf")
     ctx.wait_for_holder(key, ctx.leaf.instance_id)
     ctx.wait_until(
@@ -381,10 +398,13 @@ def use_002(ctx: ScenarioContext) -> None:
     value = ctx.value("use002")
 
     prime_leaf_from_root(ctx, key, value)
+    before_count = ctx.key_occurrences_in_cp_inventory(ctx.leaf.instance_id, key)
     first = ctx.redis.get(ctx.leaf, key)
     second = ctx.redis.get(ctx.leaf, key)
     assert_true(first == value, f"USE-002 first read mismatch: {first!r}")
     assert_true(second == value, f"USE-002 second read mismatch: {second!r}")
+    after_count = ctx.key_occurrences_in_cp_inventory(ctx.leaf.instance_id, key)
+    assert_true(before_count <= 1 and after_count <= 1, "USE-002 duplicate key entries in CP inventory")
 
 
 def use_003(ctx: ScenarioContext) -> None:
@@ -421,6 +441,7 @@ def use_004(ctx: ScenarioContext) -> None:
     got = ctx.redis.get(ctx.branch, key)
     assert_true(got == value, f"USE-004 branch read mismatch: {got!r}")
     assert_true(ctx.redis.exists(ctx.branch, key), "USE-004 expected key cached on branch")
+    ctx.wait_for_holder(key, ctx.branch.instance_id)
 
 
 def use_005(ctx: ScenarioContext) -> None:
@@ -556,6 +577,10 @@ def use_011(ctx: ScenarioContext) -> None:
 
     got = ctx.redis.get(ctx.leaf, key)
     assert_true(got == new_value, f"USE-011 expected refreshed value {new_value!r}, got {got!r}")
+    ctx.wait_until(
+        lambda: ctx.key_present_in_cp_inventory(ctx.leaf.instance_id, key),
+        "USE-011 expected key in leaf CP inventory after refresh",
+    )
 
 
 def use_012(ctx: ScenarioContext) -> None:
@@ -656,6 +681,7 @@ def use_016(ctx: ScenarioContext) -> None:
 
     got = ctx.redis.get(ctx.leaf, key)
     assert_true(got == value, f"USE-016 expected refill value, got {got!r}")
+    ctx.wait_for_holder(key, ctx.leaf.instance_id)
 
 
 def use_017(ctx: ScenarioContext) -> None:
@@ -672,6 +698,7 @@ def use_017(ctx: ScenarioContext) -> None:
         ctx.redis.delete(ctx.leaf, key)
         got = ctx.redis.get(ctx.leaf, key)
         assert_true(got is None, f"USE-017 strict policy expected miss, got {got!r}")
+        ctx.wait_for_not_holder(key, ctx.leaf.instance_id)
     else:
         got = ctx.redis.get(ctx.leaf, key)
         assert_true(got in (None, value), f"USE-017 stale policy expected None or old value, got {got!r}")
@@ -778,6 +805,12 @@ def use_022(ctx: ScenarioContext) -> None:
     status, payload = ctx.cp.nearest(key, ctx.leaf.instance_id)
     assert_status(status, 200, "USE-022 nearest after restart")
     assert_true(isinstance(payload, dict) and "instanceId" in payload, "USE-022 nearest payload invalid")
+    inst_status, _ = ctx.cp.instances()
+    assert_status(inst_status, 200, "USE-022 instances after restart")
+    topo_status, topo_payload = ctx.cp.topology()
+    assert_status(topo_status, 200, "USE-022 topology after restart")
+    assert_true(isinstance(topo_payload, dict), "USE-022 topology payload invalid")
+    ctx.wait_for_holder(key, ctx.leaf.instance_id)
 
 
 def use_023(ctx: ScenarioContext) -> None:
@@ -1069,6 +1102,13 @@ def use_035(ctx: ScenarioContext) -> None:
 
     got = ctx.redis.get(ctx.leaf, key)
     assert_true(got == value, f"USE-035 expected root->leaf pull-through value, got {got!r}")
+    route_status, route_payload = ctx.cp.route(ctx.root.instance_id, ctx.leaf.instance_id)
+    assert_status(route_status, 200, "USE-035 route")
+    assert_true(isinstance(route_payload, dict), "USE-035 route payload invalid")
+    hops = route_payload.get("hops")
+    assert_true(isinstance(hops, list) and len(hops) >= 2, "USE-035 route hops invalid")
+    assert_true(hops[0] == ctx.root.instance_id, "USE-035 route must start at root")
+    assert_true(hops[-1] == ctx.leaf.instance_id, "USE-035 route must end at leaf")
 
 
 def use_036(ctx: ScenarioContext) -> None:
@@ -1093,8 +1133,12 @@ def use_037(ctx: ScenarioContext) -> None:
 
     ctx.clear_key_all(key)
     ctx.redis.set(ctx.root, key, value)
+    before = set(ctx.holders(key))
+    assert_true(ctx.root.instance_id in before or len(before) == 0, "USE-037 unexpected holders before leaf read")
+    assert_true(ctx.leaf.instance_id not in before, "USE-037 leaf should not be holder before read")
     got = ctx.redis.get(ctx.leaf, key)
     assert_true(got == value, f"USE-037 immediate read-after-write mismatch: {got!r}")
+    ctx.wait_for_holder(key, ctx.leaf.instance_id)
 
 
 def use_038(ctx: ScenarioContext) -> None:
@@ -1116,6 +1160,7 @@ def use_039(ctx: ScenarioContext) -> None:
     key = ctx.key("use039")
 
     ctx.clear_key_all(key)
+    before = set(ctx.holders(key))
     deleted = ctx.redis.delete(ctx.root, key)
     assert_true(deleted in (0, 1), "USE-039 invalid delete result")
 
@@ -1124,6 +1169,8 @@ def use_039(ctx: ScenarioContext) -> None:
 
     status, _ = ctx.cp.nearest(key, ctx.leaf.instance_id)
     assert_status(status, 404, "USE-039 nearest")
+    after = set(ctx.holders(key))
+    assert_true(after == before, "USE-039 expected control-plane holder set to remain unchanged")
 
 
 def use_040(ctx: ScenarioContext) -> None:
