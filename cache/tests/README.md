@@ -1,15 +1,21 @@
-# Cache Control Plane Tests (Hurl + Curl)
+# Cache Tests
 
 This test implementation is based on:
 
 - `/Volumes/My Shared Files/DevBox/hal/cache/tests.md`
 - `/Volumes/My Shared Files/DevBox/hal/cache/test-matrix.md`
 
-Framework and tooling:
+Control-plane API framework and tooling:
 
 - `hurl` for HTTP request/response test flows
 - `curl` + `jq` for supplemental checks (edge cases and performance loops)
 - `bash` runner script
+
+Usage-scenario framework (Option 2):
+
+- Python runner that uses `valkey-cli` or `redis-cli` for cache data-plane operations
+- REST calls to the control plane for propagation/state assertions
+- See `/Volumes/My Shared Files/DevBox/hal/cache/tests/python/README.md`
 
 ## Test files
 
@@ -26,6 +32,7 @@ Hurl suites:
 Runner:
 
 - `/Volumes/My Shared Files/DevBox/hal/cache/tests/run-tests.sh`
+- `/Volumes/My Shared Files/DevBox/hal/cache/tests/python/run_usage_tests.py`
 
 ## Run
 
