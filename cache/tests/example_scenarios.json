@@ -1,0 +1,34 @@
+{
+  "scenarios": [
+    {
+      "name": "leaf_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:pullthrough:001",
+          "value": "hello-from-root"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:pullthrough:001",
+          "node": "root1"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:pullthrough:001",
+          "expected_value": "hello-from-root",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:pullthrough:001",
+          "node": "leaf1",
+          "source_node": "leaf1"
+        }
+      ]
+    }
+  ]
+}
