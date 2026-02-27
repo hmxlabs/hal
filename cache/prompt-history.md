@@ -167,3 +167,12 @@ Read the specifications of the cache component. Create a new test suite using a 
 - Harness: Codex Mac
 - Prompt:
 Review the Hurl test suite for the cache control plane. Ensure that it is comprehensive and covers all of the endpoints of the API. Check that it includes both positive and negative test cases for each endpoint. For example, check that it tests that when a cache instance sends a message about evicting a key, that the control plane correctly updates its internal state to reflect that eviction. Check that it tests that when a cache instance sends a message about adding a key, that the control plane correctly updates its internal state to reflect that addition. Check that it tests that when a cache instance sends a message about obtaining data from another instance, that the control plane correctly updates its internal state to reflect where that data is now located. Ensure that the tests are well-structured and easy to understand, and that they provide clear assertions for what the expected outcomes should be. [THIS PROMPT ITSELF WAS WRITTEN USING AI  Opus 4.5 in Copilot!]
+
+## 2026-02-27T06:55
+- Model: GPT 5.3-Codex High
+- Context: 
+- Harness: Codex Mac
+- Prompt:
+
+
+Read the specification and tests for the cache control plane. Implement the cache control plane according to the specification. It should itself use a Redis cache to store any state. The control plane should be implmented in C. Existing libraries and frameworks should be used extensively and wherever possible. Ensure that the code passes the coding standards and quality test used for the Linux kernel. Ensure that all contract tests for the control plane pass.
