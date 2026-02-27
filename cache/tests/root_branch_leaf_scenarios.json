@@ -1,0 +1,175 @@
+{
+  "scenarios": [
+    {
+      "name": "root_branch_leaf_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rbl:pullthrough:001",
+          "value": "rbl-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rbl:pullthrough:001",
+          "node": "root1",
+          "source_node": "root1"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:rbl:pullthrough:001",
+          "expected_value": "rbl-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rbl:pullthrough:001",
+          "node": "branch1",
+          "source_node": "branch1"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rbl:pullthrough:001",
+          "expected_value": "rbl-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rbl:pullthrough:001",
+          "node": "leaf1",
+          "source_node": "leaf1"
+        }
+      ]
+    },
+    {
+      "name": "root_branch_leaf_repeat_read_leaf_hit",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rbl:repeat-read:001",
+          "value": "repeat-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:rbl:repeat-read:001",
+          "expected_value": "repeat-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rbl:repeat-read:001",
+          "expected_value": "repeat-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rbl:repeat-read:001",
+          "expected_value": "repeat-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rbl:repeat-read:001",
+          "node": "root1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rbl:repeat-read:001",
+          "node": "branch1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rbl:repeat-read:001",
+          "node": "leaf1"
+        }
+      ]
+    },
+    {
+      "name": "root_branch_leaf_branch_eviction_then_refill",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rbl:evict-refill:001",
+          "value": "evict-refill-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:rbl:evict-refill:001",
+          "expected_value": "evict-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rbl:evict-refill:001",
+          "expected_value": "evict-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "delete",
+          "node": "branch1",
+          "key": "test:rbl:evict-refill:001"
+        },
+        {
+          "op": "sleep",
+          "seconds": 1
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:rbl:evict-refill:001",
+          "expected_value": "evict-refill-value-001",
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rbl:evict-refill:001",
+          "node": "branch1"
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf_read_missing_key_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rbl:missing-key:001",
+          "expected_value": "does-not-exist",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf_read_wrong_expected_value_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rbl:wrong-value:001",
+          "value": "actual-value"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rbl:wrong-value:001",
+          "expected_value": "expected-but-wrong",
+          "require_state_change": true
+        }
+      ]
+    }
+  ]
+}

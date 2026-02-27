@@ -130,3 +130,8 @@ Update the MD file with a diagram to add a scenario where there is a root cache 
 Remove the control plabe API from the diagrams as its not accurately depicted. It would be accessed by every node and depicting that correctly will result in a messy diagram
 
 create the corresponding json file for the tests. Ensure that test includ negative test cases
+
+ow add to the MD file for scenarios that have a root, branch and leaf nodes
+
+create the corresponding json
+

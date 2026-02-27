@@ -91,3 +91,59 @@ Validate pull-through behavior when one leaf cache reads data that exists at the
 - Leaf miss triggers upstream retrieval from root.
 - Leaf caches the fetched value locally after the read.
 - Control plane location state converges from `root-only` to `root+leaf`.
+
+## Use Case 3: Root Cache + Branch Cache + Leaf Cache
+
+Validate multi-hop pull-through behavior where a leaf requests data and the request traverses a branch cache to the root cache.
+
+### Topology Diagram
+
+```text
+┌───────────────────────┐
+│ Test Framework Client │
+└───────────┬───────────┘
+            │ read/write (Redis)
+            v
+     ┌───────────────┐
+     │ Leaf Cache    │
+     │ (leaf1)       │
+     └──────┬────────┘
+            │ cache miss fetch
+            v
+     ┌───────────────┐
+     │ Branch Cache  │
+     │ (branch1)     │
+     └──────┬────────┘
+            │ upstream fetch on miss
+            v
+     ┌───────────────┐
+     │ Root Cache    │
+     │ (root1)       │
+     └───────────────┘
+```
+
+### Scenario Intent
+
+1. Write a key to `root1`.
+2. Read the key from `leaf1`.
+3. Confirm data is returned correctly at `leaf1`.
+4. Confirm holder state converges to include `root1`, `branch1`, and `leaf1`.
+
+### Suggested Scenario File
+
+- `cache/tests/root_branch_leaf_scenarios.json`
+
+### Candidate Scenarios
+
+1. `root_branch_leaf_pullthrough_basic`
+2. `root_branch_leaf_repeat_read_leaf_hit`
+3. `root_branch_leaf_branch_eviction_then_refill`
+4. `negative_leaf_read_missing_key_should_fail`
+5. `negative_leaf_read_wrong_expected_value_should_fail`
+
+### Validation Goals
+
+- Leaf reads trigger branch/root fetch chain when key is initially absent downstream.
+- Branch caches intermediate data so repeated leaf reads avoid unnecessary root fetches.
+- Control plane holder map eventually includes all expected tiers for pulled keys.
+- Negative cases fail deterministically for missing keys and value mismatches.
