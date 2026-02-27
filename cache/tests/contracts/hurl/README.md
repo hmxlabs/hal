@@ -30,6 +30,29 @@ It includes positive and negative coverage, including:
 - batch ingestion and validation
 - state convergence checks after events and deregistration
 
+### Endpoint-by-endpoint checks
+
+- `GET /v1/instances`: positive list + negative data-path filter returning empty result
+- `GET /v1/instances/{id}`: positive existing instance + negative missing instance (`404`)
+- `POST /v1/instances/{id}/register`: positive registration + negative invalid payload (`400`) + duplicate (`409`)
+- `POST /v1/instances/{id}/heartbeat`: positive heartbeat + negative missing instance (`404`)
+- `DELETE /v1/instances/{id}/deregister`: positive deregistration + negative repeat deregistration (`404`)
+- `GET /v1/content/locate/{key}`: positive locate + negative missing key (empty holder set)
+- `GET /v1/content/nearest/{key}`: positive nearest + negative missing key (`404`)
+- `GET /v1/content/instances/{id}/keys`: positive list + negative missing instance (`404`)
+- `POST /v1/content/instances/{id}/keys`: positive update + negative invalid payload (`400`) + missing instance (`404`)
+- `GET /v1/topology`: positive topology graph
+- `GET /v1/topology/proximity`: positive matrix + negative data-path filter returning empty matrix
+- `GET /v1/topology/routes/{from}/{to}`: positive route + negative missing instance (`404`)
+- `POST /v1/events`: positive single-event ingestion + negative invalid event (`400`)
+- `POST /v1/events/batch`: positive batch ingestion + negative invalid batch requests (`400`)
+
+### Event state-transition guarantees
+
+- `key_added` with `sourceInstanceId`: asserts key appears on the reporting instance, appears in locate results, and is selected as nearest from that instance.
+- `key_updated`: asserts updated key size is reflected in locate response.
+- `key_evicted`: asserts key is removed from reporting instance inventory and nearest/locate resolve only to remaining holder(s).
+
 ## Required Runtime
 
 - Running cache control plane reachable at `HAL_CACHE_CONTROL_PLANE_URL` (defaults to `http://localhost:8080`)

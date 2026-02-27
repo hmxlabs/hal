@@ -10,6 +10,14 @@ header "content-type" contains "application/json"
 jsonpath "$.instances" count >= 0
 jsonpath "$.total" >= 0
 
+# 1b) Baseline list negative data path (valid request, empty result set)
+GET {{base_url}}/v1/instances?region=contract-test-region-{{run_id}}-empty
+HTTP 200
+[Asserts]
+header "content-type" contains "application/json"
+jsonpath "$.instances" count == 0
+jsonpath "$.total" == 0
+
 # 2) Register root, branch, and leaf (positive)
 POST {{base_url}}/v1/instances/root-{{run_id}}/register
 Content-Type: application/json
@@ -161,6 +169,13 @@ header "content-type" contains "application/json"
 jsonpath "$.instances" count >= 3
 jsonpath "$.matrix" count >= 3
 
+GET {{base_url}}/v1/topology/proximity?instanceIds=does-not-exist-{{run_id}}
+HTTP 200
+[Asserts]
+header "content-type" contains "application/json"
+jsonpath "$.instances" count == 0
+jsonpath "$.matrix" count == 0
+
 GET {{base_url}}/v1/topology/routes/root-{{run_id}}/leaf-{{run_id}}
 HTTP 200
 [Asserts]
@@ -210,6 +225,23 @@ header "content-type" contains "application/json"
 jsonpath "$.code" exists
 jsonpath "$.message" exists
 
+POST {{base_url}}/v1/content/instances/does-not-exist-{{run_id}}/keys
+Content-Type: application/json
+{
+  "mode": "partial",
+  "keys": [
+    {
+      "key": "missing-instance-key-{{run_id}}",
+      "size": 512
+    }
+  ]
+}
+HTTP 404
+[Asserts]
+header "content-type" contains "application/json"
+jsonpath "$.code" exists
+jsonpath "$.message" exists
+
 GET {{base_url}}/v1/content/instances/root-{{run_id}}/keys?limit=100
 HTTP 200
 [Asserts]
@@ -232,6 +264,13 @@ header "content-type" contains "application/json"
 jsonpath "$.key" == "inv-key-{{run_id}}"
 jsonpath "$.instances" count >= 1
 jsonpath "$.instances[0].instanceId" == "root-{{run_id}}"
+
+GET {{base_url}}/v1/content/locate/not-present-{{run_id}}?sourceInstanceId=leaf-{{run_id}}
+HTTP 200
+[Asserts]
+header "content-type" contains "application/json"
+jsonpath "$.key" == "not-present-{{run_id}}"
+jsonpath "$.instances" count == 0
 
 GET {{base_url}}/v1/content/nearest/inv-key-{{run_id}}?sourceInstanceId=leaf-{{run_id}}
 HTTP 200
@@ -286,7 +325,19 @@ HTTP 200
 [Asserts]
 header "content-type" contains "application/json"
 jsonpath "$.key" == "transfer-key-{{run_id}}"
-jsonpath "$.instances" count >= 2
+jsonpath "$.instances" count == 2
+jsonpath "$.instances[0].instanceId" == "leaf-{{run_id}}"
+jsonpath "$.instances[1].instanceId" == "root-{{run_id}}"
+
+GET {{base_url}}/v1/content/nearest/transfer-key-{{run_id}}?sourceInstanceId=leaf-{{run_id}}
+[Options]
+retry: 20
+retry-interval: 250
+HTTP 200
+[Asserts]
+header "content-type" contains "application/json"
+jsonpath "$.key" == "transfer-key-{{run_id}}"
+jsonpath "$.instanceId" == "leaf-{{run_id}}"
 
 POST {{base_url}}/v1/events
 Content-Type: application/json
@@ -349,6 +400,16 @@ header "content-type" contains "application/json"
 jsonpath "$.key" == "transfer-key-{{run_id}}"
 jsonpath "$.instances" count == 1
 jsonpath "$.instances[0].instanceId" == "root-{{run_id}}"
+
+GET {{base_url}}/v1/content/nearest/transfer-key-{{run_id}}?sourceInstanceId=leaf-{{run_id}}
+[Options]
+retry: 20
+retry-interval: 250
+HTTP 200
+[Asserts]
+header "content-type" contains "application/json"
+jsonpath "$.key" == "transfer-key-{{run_id}}"
+jsonpath "$.instanceId" == "root-{{run_id}}"
 
 # Negative single-event validation.
 POST {{base_url}}/v1/events
