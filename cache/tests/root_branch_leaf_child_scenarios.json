@@ -1,0 +1,190 @@
+{
+  "scenarios": [
+    {
+      "name": "root_branch_leaf_child_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rblc:pullthrough:001",
+          "value": "rblc-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rblc:pullthrough:001",
+          "node": "root1",
+          "source_node": "root1"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:rblc:pullthrough:001",
+          "expected_value": "rblc-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rblc:pullthrough:001",
+          "expected_value": "rblc-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rblc:pullthrough:001",
+          "expected_value": "rblc-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rblc:pullthrough:001",
+          "node": "root1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rblc:pullthrough:001",
+          "node": "branch1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rblc:pullthrough:001",
+          "node": "leaf1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rblc:pullthrough:001",
+          "node": "leaf2"
+        }
+      ]
+    },
+    {
+      "name": "root_branch_leaf_child_repeat_read_deep_leaf_hit",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rblc:repeat-read:001",
+          "value": "repeat-deep-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:rblc:repeat-read:001",
+          "expected_value": "repeat-deep-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rblc:repeat-read:001",
+          "expected_value": "repeat-deep-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rblc:repeat-read:001",
+          "expected_value": "repeat-deep-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rblc:repeat-read:001",
+          "expected_value": "repeat-deep-value-001"
+        }
+      ]
+    },
+    {
+      "name": "root_branch_leaf_child_deep_leaf_delete_then_refill",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rblc:delete-refill:001",
+          "value": "delete-refill-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:rblc:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rblc:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rblc:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "delete",
+          "node": "leaf2",
+          "key": "test:rblc:delete-refill:001"
+        },
+        {
+          "op": "sleep",
+          "seconds": 1
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rblc:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rblc:delete-refill:001",
+          "node": "leaf2"
+        }
+      ]
+    },
+    {
+      "name": "negative_child_leaf_read_missing_key_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rblc:missing-key:001",
+          "expected_value": "does-not-exist",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_child_leaf_read_wrong_expected_value_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rblc:wrong-value:001",
+          "value": "actual-value"
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rblc:wrong-value:001",
+          "expected_value": "expected-but-wrong",
+          "require_state_change": true
+        }
+      ]
+    }
+  ]
+}

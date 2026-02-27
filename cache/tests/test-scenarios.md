@@ -147,3 +147,69 @@ Validate multi-hop pull-through behavior where a leaf requests data and the requ
 - Branch caches intermediate data so repeated leaf reads avoid unnecessary root fetches.
 - Control plane holder map eventually includes all expected tiers for pulled keys.
 - Negative cases fail deterministically for missing keys and value mismatches.
+
+## Use Case 4: Root + Branch + Leaf + Child Leaf
+
+Validate deeper-hierarchy pull-through behavior by adding one more cache tier below `leaf1` (`leaf2`).
+
+### Topology Diagram
+
+```text
+┌───────────────────────┐
+│ Test Framework Client │
+└───────────┬───────────┘
+            │ read/write (Redis)
+            v
+     ┌───────────────┐
+     │ Child Leaf    │
+     │ (leaf2)       │
+     └──────┬────────┘
+            │ cache miss fetch
+            v
+     ┌───────────────┐
+     │ Leaf Cache    │
+     │ (leaf1)       │
+     └──────┬────────┘
+            │ cache miss fetch
+            v
+     ┌───────────────┐
+     │ Branch Cache  │
+     │ (branch1)     │
+     └──────┬────────┘
+            │ upstream fetch on miss
+            v
+     ┌───────────────┐
+     │ Root Cache    │
+     │ (root1)       │
+     └───────────────┘
+```
+
+### Scenario Intent
+
+1. Write a key to `root1`.
+2. Read from `branch1`, then `leaf1`, then `leaf2`.
+3. Confirm reads return expected value at each tier.
+4. Confirm holder state converges to include all four nodes for the pulled key.
+
+### Scenario File
+
+- `cache/tests/root_branch_leaf_child_scenarios.json`
+
+### Included Scenarios
+
+1. `root_branch_leaf_child_pullthrough_basic` (positive)
+2. `root_branch_leaf_child_repeat_read_deep_leaf_hit` (positive)
+3. `root_branch_leaf_child_deep_leaf_delete_then_refill` (positive)
+4. `negative_child_leaf_read_missing_key_should_fail` (negative, expected failure)
+5. `negative_child_leaf_read_wrong_expected_value_should_fail` (negative, expected failure)
+
+### Negative Scenario Note
+
+- Negative scenarios are intentionally expected to fail.
+- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+
+### Validation Goals
+
+- Pull-through continues to work with an additional downstream cache tier.
+- Data remains readable and consistent at the deepest node (`leaf2`).
+- Control plane mapping converges to reflect placement across all tiers.
