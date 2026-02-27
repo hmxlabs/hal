@@ -17,12 +17,7 @@ Validate behavior when only one cache node exists (the root), and confirm the co
      ┌───────────────┐
      │ Root Cache    │
      │ (root1)       │
-     └──────┬────────┘
-            │ state/lookup checks (REST)
-            v
-   ┌───────────────────┐
-   │ Control Plane API │
-   └───────────────────┘
+     └───────────────┘
 ```
 
 ### Scenario File
@@ -42,3 +37,57 @@ Validate behavior when only one cache node exists (the root), and confirm the co
 - Reads from `root1` return expected values and preserve correct holder mapping.
 - Overwrites return the latest value on subsequent reads.
 - Delete + recreate cycles converge to the recreated value and correct control plane holder state.
+
+## Use Case 2: Root Cache + Single Leaf Cache
+
+Validate pull-through behavior when one leaf cache reads data that exists at the root cache.
+
+### Topology Diagram
+
+```text
+┌───────────────────────┐
+│ Test Framework Client │
+└───────────┬───────────┘
+            │ read/write (Redis)
+            v
+     ┌───────────────┐
+     │ Leaf Cache    │
+     │ (leaf1)       │
+     └──────┬────────┘
+            │ cache miss fetch
+            v
+     ┌───────────────┐
+     │ Root Cache    │
+     │ (root1)       │
+     └───────────────┘
+```
+
+### Scenario Intent
+
+1. Write a key to `root1`.
+2. Confirm control plane lists `root1` as a holder.
+3. Read the key from `leaf1` and verify expected value.
+4. Confirm control plane now lists both `root1` and `leaf1` as holders.
+
+### Scenario File
+
+- `cache/tests/root_leaf_scenarios.json`
+
+### Included Scenarios
+
+1. `root_leaf_pullthrough_basic` (positive)
+2. `root_leaf_repeat_read_stays_consistent` (positive)
+3. `negative_leaf_read_missing_key_should_fail` (negative, expected failure)
+4. `negative_leaf_read_wrong_expected_value_should_fail` (negative, expected failure)
+5. `negative_require_state_change_twice_should_fail` (negative, expected failure)
+
+### Negative Scenario Note
+
+- Negative scenarios are intentionally expected to fail.
+- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+
+### Validation Goals
+
+- Leaf miss triggers upstream retrieval from root.
+- Leaf caches the fetched value locally after the read.
+- Control plane location state converges from `root-only` to `root+leaf`.

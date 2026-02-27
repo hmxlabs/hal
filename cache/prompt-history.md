@@ -124,3 +124,9 @@ Using the scenario format you've defined, create a new JSON file for scenarios t
 create a test scenarios markdown file and add this use case with a diagram to the file as the first use case.
 
 change the diagram in test-scenarios.md to be an ASCII diagram so it can be viewed easily inline
+
+Update the MD file with a diagram to add a scenario where there is a root cache and one single leaf cache
+
+Remove the control plabe API from the diagrams as its not accurately depicted. It would be accessed by every node and depicting that correctly will result in a messy diagram
+
+create the corresponding json file for the tests. Ensure that test includ negative test cases

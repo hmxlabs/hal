@@ -1,0 +1,130 @@
+{
+  "scenarios": [
+    {
+      "name": "root_leaf_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-leaf:pullthrough:001",
+          "value": "root-leaf-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-leaf:pullthrough:001",
+          "node": "root1",
+          "source_node": "root1"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:root-leaf:pullthrough:001",
+          "expected_value": "root-leaf-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-leaf:pullthrough:001",
+          "node": "leaf1",
+          "source_node": "leaf1"
+        }
+      ]
+    },
+    {
+      "name": "root_leaf_repeat_read_stays_consistent",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-leaf:repeat-read:001",
+          "value": "repeat-read-value-001"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:root-leaf:repeat-read:001",
+          "expected_value": "repeat-read-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:root-leaf:repeat-read:001",
+          "expected_value": "repeat-read-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-leaf:repeat-read:001",
+          "node": "root1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-leaf:repeat-read:001",
+          "node": "leaf1"
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf_read_missing_key_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:root-leaf:missing-key:001",
+          "expected_value": "does-not-exist",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf_read_wrong_expected_value_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-leaf:wrong-value:001",
+          "value": "actual-value"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:root-leaf:wrong-value:001",
+          "expected_value": "expected-but-wrong",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_require_state_change_twice_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-leaf:state-change:001",
+          "value": "state-change-value"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:root-leaf:state-change:001",
+          "expected_value": "state-change-value",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:root-leaf:state-change:001",
+          "expected_value": "state-change-value",
+          "require_state_change": true
+        }
+      ]
+    }
+  ]
+}
