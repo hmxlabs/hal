@@ -65,8 +65,11 @@ The CLI can run many scenarios via `run-scenario`.
 Supported step `op` values:
 
 - `write`
+- `write_expect_failure`
 - `read`
 - `delete`
+- `capture_config`
+- `set_config`
 - `assert_locate_contains`
 - `sleep`
 
@@ -101,5 +104,9 @@ python3 cache/tests/hal_cache_test_framework.py run-scenario \
   timeout (`--timeout-seconds`) before failing.
 - For read verification, use `--require-state-change` (or scenario
   `require_state_change`) when the read is expected to populate a new holder.
+- Scenario `expected_failure: true` is now honored by the runner: the scenario
+  passes only when a `FrameworkError` is observed.
+- Use scenario `expected_error_contains` to ensure expected-failure scenarios
+  fail for the right reason.
 - The framework currently validates control-plane holder mapping and instance
   status via documented endpoints, not event stream internals.

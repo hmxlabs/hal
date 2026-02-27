@@ -250,12 +250,22 @@ class RedisNodeClient:
         return self._client
 
     def set_value(self, key: str, value: bytes) -> None:
-        ok = self._ensure_client().set(key, value)
+        try:
+            ok = self._ensure_client().set(key, value)
+        except Exception as exc:
+            raise FrameworkError(
+                f"SET failed for key {key!r} on node {self.node.name!r}: {exc}"
+            ) from exc
         if not ok:
             raise FrameworkError(f"SET failed for key {key!r} on node {self.node.name!r}")
 
     def get_value(self, key: str) -> Optional[bytes]:
-        value = self._ensure_client().get(key)
+        try:
+            value = self._ensure_client().get(key)
+        except Exception as exc:
+            raise FrameworkError(
+                f"GET failed for key {key!r} on node {self.node.name!r}: {exc}"
+            ) from exc
         if value is None:
             return None
         if isinstance(value, bytes):
@@ -267,7 +277,61 @@ class RedisNodeClient:
         )
 
     def delete_key(self, key: str) -> int:
-        return int(self._ensure_client().delete(key))
+        try:
+            deleted = self._ensure_client().delete(key)
+        except Exception as exc:
+            raise FrameworkError(
+                f"DELETE failed for key {key!r} on node {self.node.name!r}: {exc}"
+            ) from exc
+        return int(deleted)
+
+    def get_config(self, parameter: str) -> str:
+        try:
+            config = self._ensure_client().config_get(parameter)
+        except Exception as exc:
+            raise FrameworkError(
+                f"CONFIG GET failed for {parameter!r} on node {self.node.name!r}: {exc}"
+            ) from exc
+        if not isinstance(config, dict) or not config:
+            raise FrameworkError(
+                f"CONFIG GET returned unexpected payload for {parameter!r} on "
+                f"{self.node.name!r}: {config!r}"
+            )
+
+        target = parameter.lower()
+        for key, value in config.items():
+            key_text = self._as_text(key).lower()
+            if key_text == target:
+                return self._as_text(value)
+
+        # redis-py may return a single entry for fuzzy matches, so use it if exact key is absent.
+        if len(config) == 1:
+            return self._as_text(next(iter(config.values())))
+
+        raise FrameworkError(
+            f"CONFIG GET for {parameter!r} on {self.node.name!r} did not include that "
+            f"parameter: {config!r}"
+        )
+
+    def set_config(self, parameter: str, value: str) -> None:
+        try:
+            ok = self._ensure_client().config_set(parameter, value)
+        except Exception as exc:
+            raise FrameworkError(
+                f"CONFIG SET failed for {parameter!r}={value!r} on node "
+                f"{self.node.name!r}: {exc}"
+            ) from exc
+        if not ok:
+            raise FrameworkError(
+                f"CONFIG SET returned false for {parameter!r}={value!r} on "
+                f"node {self.node.name!r}"
+            )
+
+    @staticmethod
+    def _as_text(value: Any) -> str:
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="replace")
+        return str(value)
 
 
 @dataclass
@@ -293,6 +357,7 @@ class CacheTestFramework:
         self.nodes: Dict[str, NodeSpec] = {}
         self.node_clients: Dict[str, RedisNodeClient] = {}
         self.node_ids: Dict[str, str] = {}
+        self._scenario_vars: Dict[str, str] = {}
 
         for node in nodes:
             if node.name in self.nodes:
@@ -505,19 +570,49 @@ class CacheTestFramework:
         steps = scenario.get("steps")
         if not isinstance(steps, list) or not steps:
             raise FrameworkError(f"Scenario {name!r} has no valid 'steps' list.")
+        expected_failure = bool(scenario.get("expected_failure", False))
+        expected_error_contains = scenario.get("expected_error_contains")
+        if expected_error_contains is not None:
+            expected_error_contains = str(expected_error_contains)
 
         outputs: List[Dict[str, Any]] = []
+        self._scenario_vars = {}
         started = time.monotonic()
-        for index, step in enumerate(steps, start=1):
-            if not isinstance(step, dict):
-                raise FrameworkError(f"Scenario {name!r} step {index} is not an object.")
-            outputs.append(self._run_step(name, index, step))
+        try:
+            for index, step in enumerate(steps, start=1):
+                if not isinstance(step, dict):
+                    raise FrameworkError(f"Scenario {name!r} step {index} is not an object.")
+                outputs.append(self._run_step(name, index, step))
+        except FrameworkError as exc:
+            if not expected_failure:
+                raise
+            error_text = str(exc)
+            if expected_error_contains and expected_error_contains not in error_text:
+                raise FrameworkError(
+                    f"Scenario {name!r} failed as expected, but error did not contain "
+                    f"{expected_error_contains!r}. Actual error: {error_text}"
+                ) from exc
+            return {
+                "scenario": name,
+                "stepCount": len(outputs),
+                "elapsedSeconds": round(time.monotonic() - started, 3),
+                "steps": outputs,
+                "expectedFailure": True,
+                "failedAsExpected": True,
+                "error": error_text,
+            }
+
+        if expected_failure:
+            raise FrameworkError(
+                f"Scenario {name!r} was expected to fail, but completed successfully."
+            )
 
         return {
             "scenario": name,
             "stepCount": len(outputs),
             "elapsedSeconds": round(time.monotonic() - started, 3),
             "steps": outputs,
+            "expectedFailure": False,
         }
 
     def _run_step(self, scenario_name: str, index: int, step: Dict[str, Any]) -> Dict[str, Any]:
@@ -542,6 +637,36 @@ class CacheTestFramework:
             )
             return {"op": "write", "step": index, "result": result}
 
+        if op == "write_expect_failure":
+            node = str(step["node"])
+            key = str(step["key"])
+            value = self._value_from_step(step)
+            error_contains = step.get("error_contains")
+            error_substring = None if error_contains is None else str(error_contains)
+
+            try:
+                self.node_clients[node].set_value(key, value)
+            except FrameworkError as exc:
+                error_text = str(exc)
+                if error_substring and error_substring not in error_text:
+                    raise FrameworkError(
+                        f"Scenario {scenario_name!r} step {index}: expected write failure "
+                        f"to contain {error_substring!r}, but got {error_text!r}."
+                    ) from exc
+                return {
+                    "op": "write_expect_failure",
+                    "step": index,
+                    "node": node,
+                    "key": key,
+                    "valueBytes": len(value),
+                    "error": error_text,
+                }
+
+            raise FrameworkError(
+                f"Scenario {scenario_name!r} step {index}: expected write to fail for "
+                f"key {key!r} on node {node!r}, but it succeeded."
+            )
+
         if op == "read":
             node = str(step["node"])
             key = str(step["key"])
@@ -555,6 +680,45 @@ class CacheTestFramework:
                 timeout_seconds=self._opt_float(step.get("timeout_seconds")),
             )
             return {"op": "read", "step": index, "result": result}
+
+        if op == "capture_config":
+            node = str(step["node"])
+            param = str(step["param"])
+            variable = str(step.get("as", "")).strip()
+            if not variable:
+                raise FrameworkError(
+                    f"Scenario {scenario_name!r} step {index}: capture_config requires "
+                    f"non-empty 'as'."
+                )
+            value = self.node_clients[node].get_config(param)
+            self._scenario_vars[variable] = value
+            return {
+                "op": "capture_config",
+                "step": index,
+                "node": node,
+                "param": param,
+                "as": variable,
+                "value": value,
+            }
+
+        if op == "set_config":
+            node = str(step["node"])
+            param = str(step["param"])
+            value = self._resolve_step_text_value(
+                scenario_name=scenario_name,
+                index=index,
+                step=step,
+                value_key="value",
+                value_from_key="value_from",
+            )
+            self.node_clients[node].set_config(param, value)
+            return {
+                "op": "set_config",
+                "step": index,
+                "node": node,
+                "param": param,
+                "value": value,
+            }
 
         if op == "delete":
             node = str(step["node"])
@@ -586,7 +750,8 @@ class CacheTestFramework:
 
         raise FrameworkError(
             f"Scenario {scenario_name!r} step {index} uses unsupported op {op!r}. "
-            "Supported ops: write, read, delete, assert_locate_contains, sleep"
+            "Supported ops: write, write_expect_failure, read, delete, capture_config, "
+            "set_config, assert_locate_contains, sleep"
         )
 
     @staticmethod
@@ -609,6 +774,41 @@ class CacheTestFramework:
         if value is None:
             return None
         return float(value)
+
+    def _resolve_step_text_value(
+        self,
+        *,
+        scenario_name: str,
+        index: int,
+        step: Dict[str, Any],
+        value_key: str,
+        value_from_key: str,
+    ) -> str:
+        has_direct = value_key in step
+        has_from = value_from_key in step
+        if has_direct and has_from:
+            raise FrameworkError(
+                f"Scenario {scenario_name!r} step {index}: specify only one of "
+                f"{value_key!r} or {value_from_key!r}."
+            )
+        if has_from:
+            variable = str(step[value_from_key]).strip()
+            if not variable:
+                raise FrameworkError(
+                    f"Scenario {scenario_name!r} step {index}: {value_from_key!r} cannot be empty."
+                )
+            if variable not in self._scenario_vars:
+                raise FrameworkError(
+                    f"Scenario {scenario_name!r} step {index}: unknown scenario variable "
+                    f"{variable!r}."
+                )
+            return self._scenario_vars[variable]
+        if has_direct:
+            return str(step[value_key])
+        raise FrameworkError(
+            f"Scenario {scenario_name!r} step {index}: missing {value_key!r} "
+            f"(or {value_from_key!r})."
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -83,8 +83,8 @@ Validate pull-through behavior when one leaf cache reads data that exists at the
 
 ### Negative Scenario Note
 
-- Negative scenarios are intentionally expected to fail.
-- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+- Negative scenarios are intentionally expected to fail specific operations.
+- They are asserted either with scenario-level `expected_failure: true` or step-level `write_expect_failure`, so full files can include both positive and negative scenarios.
 
 ### Validation Goals
 
@@ -205,8 +205,8 @@ Validate deeper-hierarchy pull-through behavior by adding one more cache tier be
 
 ### Negative Scenario Note
 
-- Negative scenarios are intentionally expected to fail.
-- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+- Negative scenarios are intentionally expected to fail specific operations.
+- They are asserted either with scenario-level `expected_failure: true` or step-level `write_expect_failure`, so full files can include both positive and negative scenarios.
 
 ### Validation Goals
 
@@ -262,8 +262,8 @@ Validate fan-out behavior where two leaf caches independently request data from 
 
 ### Negative Scenario Note
 
-- Negative scenarios are intentionally expected to fail.
-- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+- Negative scenarios are intentionally expected to fail specific operations.
+- They are asserted either with scenario-level `expected_failure: true` or step-level `write_expect_failure`, so full files can include both positive and negative scenarios.
 
 ### Validation Goals
 
@@ -319,8 +319,8 @@ Validate multi-path fan-out behavior with two branch paths under one root, each 
 
 ### Negative Scenario Note
 
-- Negative scenarios are intentionally expected to fail.
-- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+- Negative scenarios are intentionally expected to fail specific operations.
+- They are asserted either with scenario-level `expected_failure: true` or step-level `write_expect_failure`, so full files can include both positive and negative scenarios.
 
 ### Validation Goals
 
@@ -375,11 +375,12 @@ Validate deep multi-hop pull-through with two independent branch paths, each 3 n
 3. `two_branches_three_deep_midnode_delete_then_refill` (positive)
 4. `negative_branch1c_missing_key_should_fail` (negative, expected failure)
 5. `negative_branch2c_wrong_expected_value_should_fail` (negative, expected failure)
+6. `negative_branch2c_write_when_full_noeviction_should_fail` (negative, expected failure)
 
 ### Negative Scenario Note
 
-- Negative scenarios are intentionally expected to fail.
-- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+- Negative scenarios are intentionally expected to fail specific operations.
+- They are asserted either with scenario-level `expected_failure: true` or step-level `write_expect_failure`, so full files can include both positive and negative scenarios.
 
 ### Validation Goals
 
@@ -426,11 +427,12 @@ Validate fan-out behavior where three leaf caches independently fetch data from 
 3. `root_three_leaf_delete_one_leaf_others_serve` (positive)
 4. `negative_leaf2_missing_key_should_fail` (negative, expected failure)
 5. `negative_leaf3_wrong_expected_value_should_fail` (negative, expected failure)
+6. `negative_leaf3_write_when_full_noeviction_should_fail` (negative, expected failure)
 
 ### Negative Scenario Note
 
-- Negative scenarios are intentionally expected to fail.
-- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+- Negative scenarios are intentionally expected to fail specific operations.
+- They are asserted either with scenario-level `expected_failure: true` or step-level `write_expect_failure`, so full files can include both positive and negative scenarios.
 
 ### Validation Goals
 
@@ -484,11 +486,12 @@ Validate deep multi-path pull-through behavior with three independent branch pat
 3. `three_branches_three_deep_midnode_delete_then_refill` (positive)
 4. `negative_branch3c_missing_key_should_fail` (negative, expected failure)
 5. `negative_branch2c_wrong_expected_value_should_fail` (negative, expected failure)
+6. `negative_branch3c_write_when_full_noeviction_should_fail` (negative, expected failure)
 
 ### Negative Scenario Note
 
-- Negative scenarios are intentionally expected to fail.
-- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+- Negative scenarios are intentionally expected to fail specific operations.
+- They are asserted either with scenario-level `expected_failure: true` or step-level `write_expect_failure`, so full files can include both positive and negative scenarios.
 
 ### Validation Goals
 

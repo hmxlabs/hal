@@ -162,6 +162,7 @@
       "name": "negative_leaf2_missing_key_should_fail",
       "negative": true,
       "expected_failure": true,
+      "expected_error_contains": "GET returned nil",
       "steps": [
         {
           "op": "read",
@@ -176,6 +177,7 @@
       "name": "negative_leaf3_wrong_expected_value_should_fail",
       "negative": true,
       "expected_failure": true,
+      "expected_error_contains": "GET returned unexpected value",
       "steps": [
         {
           "op": "write",
@@ -189,6 +191,55 @@
           "key": "test:r3l:wrong-value:001",
           "expected_value": "expected-but-wrong",
           "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf3_write_when_full_noeviction_should_fail",
+      "negative": true,
+      "steps": [
+        {
+          "op": "capture_config",
+          "node": "leaf3",
+          "param": "maxmemory",
+          "as": "leaf3_original_maxmemory"
+        },
+        {
+          "op": "capture_config",
+          "node": "leaf3",
+          "param": "maxmemory-policy",
+          "as": "leaf3_original_policy"
+        },
+        {
+          "op": "set_config",
+          "node": "leaf3",
+          "param": "maxmemory-policy",
+          "value": "noeviction"
+        },
+        {
+          "op": "set_config",
+          "node": "leaf3",
+          "param": "maxmemory",
+          "value": "1"
+        },
+        {
+          "op": "write_expect_failure",
+          "node": "leaf3",
+          "key": "test:r3l:noevict-write:001",
+          "value": "should-fail-oom",
+          "error_contains": "OOM"
+        },
+        {
+          "op": "set_config",
+          "node": "leaf3",
+          "param": "maxmemory",
+          "value_from": "leaf3_original_maxmemory"
+        },
+        {
+          "op": "set_config",
+          "node": "leaf3",
+          "param": "maxmemory-policy",
+          "value_from": "leaf3_original_policy"
         }
       ]
     }

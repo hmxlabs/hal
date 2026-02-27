@@ -274,6 +274,7 @@
       "name": "negative_branch3c_missing_key_should_fail",
       "negative": true,
       "expected_failure": true,
+      "expected_error_contains": "GET returned nil",
       "steps": [
         {
           "op": "read",
@@ -288,6 +289,7 @@
       "name": "negative_branch2c_wrong_expected_value_should_fail",
       "negative": true,
       "expected_failure": true,
+      "expected_error_contains": "GET returned unexpected value",
       "steps": [
         {
           "op": "write",
@@ -301,6 +303,55 @@
           "key": "test:r3b3d:wrong-value:001",
           "expected_value": "expected-but-wrong",
           "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_branch3c_write_when_full_noeviction_should_fail",
+      "negative": true,
+      "steps": [
+        {
+          "op": "capture_config",
+          "node": "branch3c",
+          "param": "maxmemory",
+          "as": "branch3c_original_maxmemory"
+        },
+        {
+          "op": "capture_config",
+          "node": "branch3c",
+          "param": "maxmemory-policy",
+          "as": "branch3c_original_policy"
+        },
+        {
+          "op": "set_config",
+          "node": "branch3c",
+          "param": "maxmemory-policy",
+          "value": "noeviction"
+        },
+        {
+          "op": "set_config",
+          "node": "branch3c",
+          "param": "maxmemory",
+          "value": "1"
+        },
+        {
+          "op": "write_expect_failure",
+          "node": "branch3c",
+          "key": "test:r3b3d:noevict-write:001",
+          "value": "should-fail-oom",
+          "error_contains": "OOM"
+        },
+        {
+          "op": "set_config",
+          "node": "branch3c",
+          "param": "maxmemory",
+          "value_from": "branch3c_original_maxmemory"
+        },
+        {
+          "op": "set_config",
+          "node": "branch3c",
+          "param": "maxmemory-policy",
+          "value_from": "branch3c_original_policy"
         }
       ]
     }
