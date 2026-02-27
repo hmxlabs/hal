@@ -113,3 +113,9 @@ It should take as its input, the address of the root node, one or more branch an
 The test framework should then be able to read/write data to any given node to insert some test data and then check that the control plane reflects this correcly. Then read data from a specified node and then ensure that the control plane has correctly updated its status.
 The intended use of this application is then to make many calls for multiple scenarios that can be tested.
 
+which python redis library is being used by this test script?
+
+why is the python import halfway down the file?
+
+Yes. That's poor form and poor error handling, fix this.
+

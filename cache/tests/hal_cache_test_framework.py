@@ -22,6 +22,14 @@ from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
+try:
+    import redis  # type: ignore
+except ImportError as exc:  # pragma: no cover - import environment dependent
+    redis = None
+    REDIS_IMPORT_ERROR = exc
+else:
+    REDIS_IMPORT_ERROR = None
+
 
 class FrameworkError(RuntimeError):
     """Raised when the framework cannot complete a test step."""
@@ -234,12 +242,10 @@ class RedisNodeClient:
     def _ensure_client(self) -> Any:
         if self._client is not None:
             return self._client
-        try:
-            import redis  # type: ignore
-        except ImportError as exc:
+        if redis is None:
             raise FrameworkError(
-                "Missing dependency 'redis'. Install it with: pip install redis"
-            ) from exc
+                "Missing dependency 'redis'. Install it with: pip install -r cache/tests/requirements.txt"
+            ) from REDIS_IMPORT_ERROR
         self._client = redis.Redis.from_url(self.node.redis_url, decode_responses=False)
         return self._client
 
@@ -684,6 +690,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def build_framework_from_args(args: argparse.Namespace) -> CacheTestFramework:
+    if redis is None:
+        raise FrameworkError(
+            "Missing dependency 'redis'. Install it with: pip install -r cache/tests/requirements.txt"
+        )
+
     headers = dict(parse_header_spec(item) for item in (args.cp_header or []))
     control_plane = ControlPlaneClient(
         args.control_plane,
