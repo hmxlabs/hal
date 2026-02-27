@@ -121,3 +121,6 @@ Yes. That's poor form and poor error handling, fix this.
 
 Using the scenario format you've defined, create a new JSON file for scenarios to test if there is only a single cache root instance
 
+create a test scenarios markdown file and add this use case with a diagram to the file as the first use case.
+
+change the diagram in test-scenarios.md to be an ASCII diagram so it can be viewed easily inline
