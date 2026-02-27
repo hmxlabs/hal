@@ -1,7 +1,36 @@
-# HAL Cache Test Framework (Python)
+# HAL Cache Test Framework
 
-This directory contains a Python CLI for validating cache-node behavior against
-the HAL cache control plane.
+This directory contains:
+
+- A Hurl-based REST contract test suite for the cache control plane API
+- A Python CLI for validating cache-node behavior against the control plane
+
+## Contract Tests (Hurl)
+
+The Hurl suite validates all control-plane REST endpoints (positive and
+negative), including state transitions for key add/update/evict flows and
+deregistration cleanup.
+
+Location:
+
+- `cache/tests/contracts/hurl/cache-control-plane-full-lifecycle.hurl`
+
+Run:
+
+```bash
+bash cache/tests/run-tests.sh --contract-only
+```
+
+You can override the control-plane URL with:
+
+```bash
+HAL_CACHE_CONTROL_PLANE_URL=http://localhost:8080 bash cache/tests/run-tests.sh --contract-only
+```
+
+## Scenario Tests (Python)
+
+The Python CLI validates cache-node behavior against the HAL cache control
+plane.
 
 It writes/reads data directly on Redis-compatible cache nodes and polls the
 control plane (`/v1/content/locate/{key}` and `/v1/instances/{id}`) to verify
