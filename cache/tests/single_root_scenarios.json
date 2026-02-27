@@ -1,0 +1,105 @@
+{
+  "scenarios": [
+    {
+      "name": "root_only_write_and_locate",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-only:write:001",
+          "value": "value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-only:write:001",
+          "node": "root1",
+          "source_node": "root1"
+        }
+      ]
+    },
+    {
+      "name": "root_only_read_after_write",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-only:read:001",
+          "value": "read-value-001"
+        },
+        {
+          "op": "read",
+          "node": "root1",
+          "key": "test:root-only:read:001",
+          "expected_value": "read-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-only:read:001",
+          "node": "root1"
+        }
+      ]
+    },
+    {
+      "name": "root_only_overwrite_latest_value",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-only:update:001",
+          "value": "v1"
+        },
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-only:update:001",
+          "value": "v2"
+        },
+        {
+          "op": "read",
+          "node": "root1",
+          "key": "test:root-only:update:001",
+          "expected_value": "v2"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-only:update:001",
+          "node": "root1",
+          "source_node": "root1"
+        }
+      ]
+    },
+    {
+      "name": "root_only_delete_and_recreate",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-only:delete:001",
+          "value": "before-delete"
+        },
+        {
+          "op": "delete",
+          "node": "root1",
+          "key": "test:root-only:delete:001"
+        },
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:root-only:delete:001",
+          "value": "after-delete"
+        },
+        {
+          "op": "read",
+          "node": "root1",
+          "key": "test:root-only:delete:001",
+          "expected_value": "after-delete"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:root-only:delete:001",
+          "node": "root1"
+        }
+      ]
+    }
+  ]
+}

@@ -119,3 +119,5 @@ why is the python import halfway down the file?
 
 Yes. That's poor form and poor error handling, fix this.
 
+Using the scenario format you've defined, create a new JSON file for scenarios to test if there is only a single cache root instance
+
