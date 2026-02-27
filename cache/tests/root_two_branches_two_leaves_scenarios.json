@@ -1,0 +1,233 @@
+{
+  "scenarios": [
+    {
+      "name": "two_branches_two_leaves_dual_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r2b2l:pullthrough:001",
+          "value": "r2b2l-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:r2b2l:pullthrough:001",
+          "expected_value": "r2b2l-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r2b2l:pullthrough:001",
+          "expected_value": "r2b2l-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch2",
+          "key": "test:r2b2l:pullthrough:001",
+          "expected_value": "r2b2l-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r2b2l:pullthrough:001",
+          "expected_value": "r2b2l-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:pullthrough:001",
+          "node": "root1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:pullthrough:001",
+          "node": "branch1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:pullthrough:001",
+          "node": "leaf1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:pullthrough:001",
+          "node": "branch2"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:pullthrough:001",
+          "node": "leaf2"
+        }
+      ]
+    },
+    {
+      "name": "two_branches_two_leaves_parallel_paths_independent_keys",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r2b2l:path-a:001",
+          "value": "path-a-value-001"
+        },
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r2b2l:path-b:001",
+          "value": "path-b-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:r2b2l:path-a:001",
+          "expected_value": "path-a-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r2b2l:path-a:001",
+          "expected_value": "path-a-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch2",
+          "key": "test:r2b2l:path-b:001",
+          "expected_value": "path-b-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r2b2l:path-b:001",
+          "expected_value": "path-b-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:path-a:001",
+          "node": "branch1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:path-a:001",
+          "node": "leaf1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:path-b:001",
+          "node": "branch2"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:path-b:001",
+          "node": "leaf2"
+        }
+      ]
+    },
+    {
+      "name": "two_branches_two_leaves_branch_delete_refill",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r2b2l:delete-refill:001",
+          "value": "delete-refill-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:r2b2l:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r2b2l:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch2",
+          "key": "test:r2b2l:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r2b2l:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "delete",
+          "node": "branch1",
+          "key": "test:r2b2l:delete-refill:001"
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r2b2l:delete-refill:001",
+          "expected_value": "delete-refill-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1",
+          "key": "test:r2b2l:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r2b2l:delete-refill:001",
+          "node": "branch1"
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf1_missing_key_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r2b2l:missing-key:001",
+          "expected_value": "does-not-exist",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf2_wrong_expected_value_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r2b2l:wrong-value:001",
+          "value": "actual-value"
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r2b2l:wrong-value:001",
+          "expected_value": "expected-but-wrong",
+          "require_state_change": true
+        }
+      ]
+    }
+  ]
+}

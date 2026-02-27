@@ -135,3 +135,14 @@ ow add to the MD file for scenarios that have a root, branch and leaf nodes
 
 create the corresponding json
 
+now add another node underneath the leaf node and create the corresponding test scenarios
+
+now add a use case that has a root node and two leaf nodes
+
+now add a use case that has two branches and two leaf nodes
+
+now add two branches that are three nodes each deep
+
+now add a root node with three leaf nodes
+
+now add scenarios for three branches that have three nodes each

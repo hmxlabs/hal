@@ -213,3 +213,285 @@ Validate deeper-hierarchy pull-through behavior by adding one more cache tier be
 - Pull-through continues to work with an additional downstream cache tier.
 - Data remains readable and consistent at the deepest node (`leaf2`).
 - Control plane mapping converges to reflect placement across all tiers.
+
+## Use Case 5: Root + Two Leaf Nodes
+
+Validate fan-out behavior where two leaf caches independently request data from the same root cache.
+
+### Topology Diagram
+
+```text
+                   ┌───────────────┐
+                   │ Root Cache    │
+                   │ (root1)       │
+                   └──────┬────────┘
+                          │
+             ┌────────────┴────────────┐
+             │                         │
+             v                         v
+      ┌───────────────┐         ┌───────────────┐
+      │ Leaf Cache    │         │ Leaf Cache    │
+      │ (leaf1)       │         │ (leaf2)       │
+      └──────┬────────┘         └──────┬────────┘
+             │ read/write (Redis)      │ read/write (Redis)
+             └────────────┬────────────┘
+                          v
+                ┌───────────────────────┐
+                │ Test Framework Client │
+                └───────────────────────┘
+```
+
+### Scenario Intent
+
+1. Write a key to `root1`.
+2. Read from `leaf1` and `leaf2`.
+3. Confirm each leaf returns expected value.
+4. Confirm holder state converges to include `root1`, `leaf1`, and `leaf2`.
+
+### Scenario File
+
+- `cache/tests/root_two_leaf_scenarios.json`
+
+### Included Scenarios
+
+1. `root_two_leaf_pullthrough_basic` (positive)
+2. `root_two_leaf_reverse_read_order` (positive)
+3. `root_two_leaf_delete_one_leaf_other_still_serves` (positive)
+4. `negative_leaf1_read_missing_key_should_fail` (negative, expected failure)
+5. `negative_leaf2_read_wrong_expected_value_should_fail` (negative, expected failure)
+
+### Negative Scenario Note
+
+- Negative scenarios are intentionally expected to fail.
+- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+
+### Validation Goals
+
+- Both leaves can independently populate from upstream and serve subsequent reads.
+- Location mapping converges to include all expected holders after fan-out reads.
+- Failure cases are deterministic for missing-key and wrong-expected-value checks.
+
+## Use Case 6: Root + Two Branches + Two Leaf Nodes
+
+Validate multi-path fan-out behavior with two branch paths under one root, each serving a dedicated leaf.
+
+### Topology Diagram
+
+```text
+                      ┌───────────────┐
+                      │ Root Cache    │
+                      │ (root1)       │
+                      └──────┬────────┘
+                             │
+               ┌─────────────┴─────────────┐
+               │                           │
+               v                           v
+        ┌───────────────┐           ┌───────────────┐
+        │ Branch Cache  │           │ Branch Cache  │
+        │ (branch1)     │           │ (branch2)     │
+        └──────┬────────┘           └──────┬────────┘
+               │                           │
+               v                           v
+        ┌───────────────┐           ┌───────────────┐
+        │ Leaf Cache    │           │ Leaf Cache    │
+        │ (leaf1)       │           │ (leaf2)       │
+        └───────────────┘           └───────────────┘
+```
+
+### Scenario Intent
+
+1. Write data to `root1`.
+2. Read through path A (`branch1` -> `leaf1`) and path B (`branch2` -> `leaf2`).
+3. Confirm values are consistent across both paths.
+4. Confirm control-plane location converges to all expected holders.
+
+### Scenario File
+
+- `cache/tests/root_two_branches_two_leaves_scenarios.json`
+
+### Included Scenarios
+
+1. `two_branches_two_leaves_dual_pullthrough_basic` (positive)
+2. `two_branches_two_leaves_parallel_paths_independent_keys` (positive)
+3. `two_branches_two_leaves_branch_delete_refill` (positive)
+4. `negative_leaf1_missing_key_should_fail` (negative, expected failure)
+5. `negative_leaf2_wrong_expected_value_should_fail` (negative, expected failure)
+
+### Negative Scenario Note
+
+- Negative scenarios are intentionally expected to fail.
+- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+
+### Validation Goals
+
+- Both branch/leaf paths independently pull data from root as needed.
+- One path can refill after local deletion without breaking the other path.
+- Holder mappings converge for each key according to the path(s) that accessed it.
+
+## Use Case 7: Root + Two Branch Paths (3 Nodes Deep Each)
+
+Validate deep multi-hop pull-through with two independent branch paths, each 3 nodes deep under the root.
+
+### Topology Diagram
+
+```text
+                         ┌───────────────┐
+                         │ Root Cache    │
+                         │ (root1)       │
+                         └──────┬────────┘
+                                │
+               ┌────────────────┴────────────────┐
+               │                                 │
+               v                                 v
+        ┌───────────────┐                 ┌───────────────┐
+        │ branch1a      │                 │ branch2a      │
+        └──────┬────────┘                 └──────┬────────┘
+               v                                 v
+        ┌───────────────┐                 ┌───────────────┐
+        │ branch1b      │                 │ branch2b      │
+        └──────┬────────┘                 └──────┬────────┘
+               v                                 v
+        ┌───────────────┐                 ┌───────────────┐
+        │ branch1c      │                 │ branch2c      │
+        └───────────────┘                 └───────────────┘
+```
+
+### Scenario Intent
+
+1. Write data to `root1`.
+2. Read down branch path A (`branch1a` -> `branch1b` -> `branch1c`).
+3. Read down branch path B (`branch2a` -> `branch2b` -> `branch2c`).
+4. Confirm values remain consistent through all hops.
+5. Confirm control-plane location converges to include expected holders.
+
+### Scenario File
+
+- `cache/tests/root_two_branches_three_deep_scenarios.json`
+
+### Included Scenarios
+
+1. `two_branches_three_deep_pullthrough_basic` (positive)
+2. `two_branches_three_deep_independent_keys` (positive)
+3. `two_branches_three_deep_midnode_delete_then_refill` (positive)
+4. `negative_branch1c_missing_key_should_fail` (negative, expected failure)
+5. `negative_branch2c_wrong_expected_value_should_fail` (negative, expected failure)
+
+### Negative Scenario Note
+
+- Negative scenarios are intentionally expected to fail.
+- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+
+### Validation Goals
+
+- Deep path traversal behaves correctly across multiple intermediate caches.
+- Both deep paths can be exercised independently without cross-path corruption.
+- Holder mapping converges as keys propagate to deeper nodes.
+
+## Use Case 8: Root + Three Leaf Nodes
+
+Validate fan-out behavior where three leaf caches independently fetch data from a single root cache.
+
+### Topology Diagram
+
+```text
+                        ┌───────────────┐
+                        │ Root Cache    │
+                        │ (root1)       │
+                        └──────┬────────┘
+                               │
+             ┌─────────────────┼─────────────────┐
+             │                 │                 │
+             v                 v                 v
+      ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+      │ Leaf Cache    │ │ Leaf Cache    │ │ Leaf Cache    │
+      │ (leaf1)       │ │ (leaf2)       │ │ (leaf3)       │
+      └───────────────┘ └───────────────┘ └───────────────┘
+```
+
+### Scenario Intent
+
+1. Write a key to `root1`.
+2. Read from `leaf1`, `leaf2`, and `leaf3`.
+3. Confirm each leaf returns the expected value.
+4. Confirm control-plane location converges to include all four holders.
+
+### Scenario File
+
+- `cache/tests/root_three_leaf_scenarios.json`
+
+### Included Scenarios
+
+1. `root_three_leaf_pullthrough_basic` (positive)
+2. `root_three_leaf_mixed_read_order` (positive)
+3. `root_three_leaf_delete_one_leaf_others_serve` (positive)
+4. `negative_leaf2_missing_key_should_fail` (negative, expected failure)
+5. `negative_leaf3_wrong_expected_value_should_fail` (negative, expected failure)
+
+### Negative Scenario Note
+
+- Negative scenarios are intentionally expected to fail.
+- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+
+### Validation Goals
+
+- All three leaves can independently populate from root.
+- Deleting one leaf copy does not break reads from other leaf nodes.
+- Holder mappings converge to the nodes that accessed each key.
+
+## Use Case 9: Root + Three Branch Paths (3 Nodes Deep Each)
+
+Validate deep multi-path pull-through behavior with three independent branch paths under one root, each path 3 nodes deep.
+
+### Topology Diagram
+
+```text
+                               ┌───────────────┐
+                               │ Root Cache    │
+                               │ (root1)       │
+                               └──────┬────────┘
+                                      │
+           ┌──────────────────────────┼──────────────────────────┐
+           │                          │                          │
+           v                          v                          v
+     ┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+     │ branch1a      │          │ branch2a      │          │ branch3a      │
+     └──────┬────────┘          └──────┬────────┘          └──────┬────────┘
+            v                          v                          v
+     ┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+     │ branch1b      │          │ branch2b      │          │ branch3b      │
+     └──────┬────────┘          └──────┬────────┘          └──────┬────────┘
+            v                          v                          v
+     ┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+     │ branch1c      │          │ branch2c      │          │ branch3c      │
+     └───────────────┘          └───────────────┘          └───────────────┘
+```
+
+### Scenario Intent
+
+1. Write data to `root1`.
+2. Read down each branch path (`a -> b -> c`) for all 3 branches.
+3. Confirm values are consistent at each hop.
+4. Confirm control-plane location converges to expected holders across paths.
+
+### Scenario File
+
+- `cache/tests/root_three_branches_three_deep_scenarios.json`
+
+### Included Scenarios
+
+1. `three_branches_three_deep_pullthrough_basic` (positive)
+2. `three_branches_three_deep_independent_keys` (positive)
+3. `three_branches_three_deep_midnode_delete_then_refill` (positive)
+4. `negative_branch3c_missing_key_should_fail` (negative, expected failure)
+5. `negative_branch2c_wrong_expected_value_should_fail` (negative, expected failure)
+
+### Negative Scenario Note
+
+- Negative scenarios are intentionally expected to fail.
+- Run them individually using `--scenario <name>` so one expected failure does not stop execution of other scenarios in the same file.
+
+### Validation Goals
+
+- Each deep branch path can pull through independently without corrupting the others.
+- Mid-path deletion/refill works while other paths continue serving.
+- Holder mappings converge as data propagates to deeper nodes per path.

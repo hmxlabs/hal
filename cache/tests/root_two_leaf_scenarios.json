@@ -1,0 +1,164 @@
+{
+  "scenarios": [
+    {
+      "name": "root_two_leaf_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rtl:pullthrough:001",
+          "value": "rtl-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rtl:pullthrough:001",
+          "node": "root1",
+          "source_node": "root1"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rtl:pullthrough:001",
+          "expected_value": "rtl-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rtl:pullthrough:001",
+          "expected_value": "rtl-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rtl:pullthrough:001",
+          "node": "root1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rtl:pullthrough:001",
+          "node": "leaf1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rtl:pullthrough:001",
+          "node": "leaf2"
+        }
+      ]
+    },
+    {
+      "name": "root_two_leaf_reverse_read_order",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rtl:reverse-order:001",
+          "value": "reverse-order-value-001"
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rtl:reverse-order:001",
+          "expected_value": "reverse-order-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rtl:reverse-order:001",
+          "expected_value": "reverse-order-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rtl:reverse-order:001",
+          "node": "leaf1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:rtl:reverse-order:001",
+          "node": "leaf2"
+        }
+      ]
+    },
+    {
+      "name": "root_two_leaf_delete_one_leaf_other_still_serves",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rtl:delete-one-leaf:001",
+          "value": "delete-one-leaf-value-001"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rtl:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rtl:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "delete",
+          "node": "leaf1",
+          "key": "test:rtl:delete-one-leaf:001"
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rtl:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rtl:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001",
+          "timeout_seconds": 15
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf1_read_missing_key_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:rtl:missing-key:001",
+          "expected_value": "does-not-exist",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf2_read_wrong_expected_value_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:rtl:wrong-value:001",
+          "value": "actual-value"
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:rtl:wrong-value:001",
+          "expected_value": "expected-but-wrong",
+          "require_state_change": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,308 @@
+{
+  "scenarios": [
+    {
+      "name": "three_branches_three_deep_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3b3d:pullthrough:001",
+          "value": "r3b3d-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1a",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch1b",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch1c",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch2a",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch2b",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch2c",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch3a",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch3b",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "branch3c",
+          "key": "test:r3b3d:pullthrough:001",
+          "expected_value": "r3b3d-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:pullthrough:001",
+          "node": "root1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:pullthrough:001",
+          "node": "branch1c"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:pullthrough:001",
+          "node": "branch2c"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:pullthrough:001",
+          "node": "branch3c"
+        }
+      ]
+    },
+    {
+      "name": "three_branches_three_deep_independent_keys",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3b3d:path1:001",
+          "value": "path1-value-001"
+        },
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3b3d:path2:001",
+          "value": "path2-value-001"
+        },
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3b3d:path3:001",
+          "value": "path3-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch1a",
+          "key": "test:r3b3d:path1:001",
+          "expected_value": "path1-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch1b",
+          "key": "test:r3b3d:path1:001",
+          "expected_value": "path1-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch1c",
+          "key": "test:r3b3d:path1:001",
+          "expected_value": "path1-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch2a",
+          "key": "test:r3b3d:path2:001",
+          "expected_value": "path2-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch2b",
+          "key": "test:r3b3d:path2:001",
+          "expected_value": "path2-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch2c",
+          "key": "test:r3b3d:path2:001",
+          "expected_value": "path2-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch3a",
+          "key": "test:r3b3d:path3:001",
+          "expected_value": "path3-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch3b",
+          "key": "test:r3b3d:path3:001",
+          "expected_value": "path3-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch3c",
+          "key": "test:r3b3d:path3:001",
+          "expected_value": "path3-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:path1:001",
+          "node": "branch1c"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:path2:001",
+          "node": "branch2c"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:path3:001",
+          "node": "branch3c"
+        }
+      ]
+    },
+    {
+      "name": "three_branches_three_deep_midnode_delete_then_refill",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3b3d:delete-refill:001",
+          "value": "delete-refill-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch2a",
+          "key": "test:r3b3d:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch2b",
+          "key": "test:r3b3d:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch2c",
+          "key": "test:r3b3d:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "branch1c",
+          "key": "test:r3b3d:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "delete",
+          "node": "branch2b",
+          "key": "test:r3b3d:delete-refill:001"
+        },
+        {
+          "op": "sleep",
+          "seconds": 1
+        },
+        {
+          "op": "read",
+          "node": "branch1c",
+          "key": "test:r3b3d:delete-refill:001",
+          "expected_value": "delete-refill-value-001"
+        },
+        {
+          "op": "read",
+          "node": "branch2b",
+          "key": "test:r3b3d:delete-refill:001",
+          "expected_value": "delete-refill-value-001",
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3b3d:delete-refill:001",
+          "node": "branch2b"
+        }
+      ]
+    },
+    {
+      "name": "negative_branch3c_missing_key_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "read",
+          "node": "branch3c",
+          "key": "test:r3b3d:missing-key:001",
+          "expected_value": "does-not-exist",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_branch2c_wrong_expected_value_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3b3d:wrong-value:001",
+          "value": "actual-value"
+        },
+        {
+          "op": "read",
+          "node": "branch2c",
+          "key": "test:r3b3d:wrong-value:001",
+          "expected_value": "expected-but-wrong",
+          "require_state_change": true
+        }
+      ]
+    }
+  ]
+}
