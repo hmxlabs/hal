@@ -33,13 +33,15 @@ bash cache/control-plane/scripts/build.sh
 This now performs:
 
 - build (`make -C cache/control-plane all`)
-- unit-style checks (`make -C cache/control-plane check`)
+- unit tests (`make -C cache/control-plane test`)
+- quality checks (`make -C cache/control-plane check`)
 
 Or equivalently:
 
 ```bash
 make -C cache/control-plane all
 make -C cache/control-plane check
+make -C cache/control-plane test
 ```
 
 ## Run Locally

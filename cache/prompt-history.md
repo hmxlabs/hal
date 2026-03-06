@@ -201,3 +201,15 @@ Check the build and test script in the cache/control-plane/scripts directory and
 Change the tests (and the implementation) so that they produce full log output that can ensure validation of what is happening.
 
 the code no longer compiles
+
+
+## 2026-03-04T06:30
+- Model: GPT 5.3-Codex-Spark High
+- Context: 
+- Harness: Codex Mac
+- Prompt:
+The code in cache/control-plane is not well structure. There is a lot of code in a single file. This is not condusive to writing maintainable code.
+
+Refactor this code into multiple files split by functionality. Ensure that the code is testable and write unit test for all the code and update the build and test script to also run the unit tests
+
+make sure the build and test script works, and ensure that the code builds all the tests pass

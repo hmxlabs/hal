@@ -20,6 +20,9 @@ make -C "${ROOT_DIR}" -B all
 printf 'Running compiler quality checks\n'
 make -C "${ROOT_DIR}" check
 
+printf 'Running unit tests\n'
+make -C "${ROOT_DIR}" test
+
 printf 'Preparing contract test dependencies\n'
 if ! command -v redis-server >/dev/null 2>&1; then
   echo "error: redis-server not found in PATH" >&2
