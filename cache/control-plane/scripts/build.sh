@@ -45,7 +45,8 @@ if ! redis-cli -h "${REDIS_HOST}" -p "${REDIS_PORT}" ping >/dev/null 2>&1; then
   echo "Started redis-server at ${REDIS_HOST}:${REDIS_PORT}"
 fi
 
-CONSOLE_LOG="$(mktemp /tmp/hal-cp-console-XXXXXX.log)"
+CONSOLE_LOG="/tmp/hal-cp-console-$$.log"
+: > "${CONSOLE_LOG}"
 SERVER_PID=""
 cleanup() {
   if [ -n "${SERVER_PID}" ]; then

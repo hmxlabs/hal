@@ -187,3 +187,5 @@ create a build script for the cache control plane that builds and then runs the 
 the build script does not appear to work. Run your script and debug it
 
 I see no test output. The script should run contract tests for the control plane present in the cache project.
+
+run the script and ensure it actually runs to completion with all the tests passing. Its currently failing to run the tests
