@@ -174,3 +174,16 @@ Review the Hurl test suite for the cache control plane. Ensure that it is compre
 - Harness: Codex Mac
 - Prompt:
 Read the specification and tests for the cache control plane. Implement the cache control plane according to the specification. It should itself use a Redis cache to store any state. The control plane should be implmented in C. Existing libraries and frameworks should be used extensively and wherever possible. Ensure that the code passes the coding standards and quality test used for the Linux kernel. Ensure that all contract tests for the control plane pass. Ensure you create a corresponding make file, build script, documentation of the code and any instructions on how it should be run and any dependencies it has. If any development dependencies are missing install them using brew and report what additional dependencies were installed.
+
+
+NOTE: This is a continue session but the model has changed
+## 2026-02-27T06:55
+- Model: GPT 5.3-Codex-Spark High
+- Context: 
+- Harness: Codex Mac
+- Prompt:
+create a build script for the cache control plane that builds and then runs the unit tests
+
+the build script does not appear to work. Run your script and debug it
+
+I see no test output. The script should run contract tests for the control plane present in the cache project.

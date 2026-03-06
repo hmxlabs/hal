@@ -24,21 +24,22 @@ Runtime/build dependencies:
 - `pkgconf` (`pkg-config`)
 - `hurl` (for contract tests)
 
-Installed with Homebrew during development:
-
-- Direct installs: `hiredis`, `jansson`, `libmicrohttpd`, `redis`, `pkgconf`
-- Transitive installs pulled by Homebrew: `gettext`, `gnutls`, `libevent`, `libidn2`, `libtasn1`, `libunistring`, `nettle`, `p11-kit`, `unbound`
-
 ## Build
 
 ```bash
 bash cache/control-plane/scripts/build.sh
 ```
 
-Or:
+This now performs:
+
+- build (`make -C cache/control-plane all`)
+- unit-style checks (`make -C cache/control-plane check`)
+
+Or equivalently:
 
 ```bash
 make -C cache/control-plane all
+make -C cache/control-plane check
 ```
 
 ## Run Locally
