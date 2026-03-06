@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 PROJECT_ROOT="$(cd -- "${ROOT_DIR}/.." && pwd)"
 TESTS_DIR="${PROJECT_ROOT}/tests"
+CONTRACT_SUITE_FILE="${TESTS_DIR}/contracts/hurl/cache-control-plane-full-lifecycle.hurl"
 
 REDIS_HOST="${HAL_CACHE_REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${HAL_CACHE_REDIS_PORT:-6379}"
@@ -36,6 +37,11 @@ fi
 
 if ! command -v ${HURL_BIN} >/dev/null 2>&1; then
   echo "warning: HURL_BIN '${HURL_BIN}' not found; contract tests may fail" >&2
+fi
+
+if [[ ! -f "${CONTRACT_SUITE_FILE}" ]]; then
+  echo "error: contract suite not found: ${CONTRACT_SUITE_FILE}" >&2
+  exit 1
 fi
 
 REDIS_STARTED=0
@@ -91,6 +97,7 @@ for _ in $(seq 1 30); do
 done
 
 echo "Running cache control-plane contract tests"
+echo "  contract_suite=${CONTRACT_SUITE_FILE}"
 HAL_CACHE_CONTROL_PLANE_URL="${CONTROL_PLANE_URL}" \
   bash "${TESTS_DIR}/run-tests.sh" --contract-only
 
