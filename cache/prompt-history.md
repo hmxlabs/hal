@@ -173,6 +173,4 @@ Review the Hurl test suite for the cache control plane. Ensure that it is compre
 - Context: 
 - Harness: Codex Mac
 - Prompt:
-
-
-Read the specification and tests for the cache control plane. Implement the cache control plane according to the specification. It should itself use a Redis cache to store any state. The control plane should be implmented in C. Existing libraries and frameworks should be used extensively and wherever possible. Ensure that the code passes the coding standards and quality test used for the Linux kernel. Ensure that all contract tests for the control plane pass.
+Read the specification and tests for the cache control plane. Implement the cache control plane according to the specification. It should itself use a Redis cache to store any state. The control plane should be implmented in C. Existing libraries and frameworks should be used extensively and wherever possible. Ensure that the code passes the coding standards and quality test used for the Linux kernel. Ensure that all contract tests for the control plane pass. Ensure you create a corresponding make file, build script, documentation of the code and any instructions on how it should be run and any dependencies it has. If any development dependencies are missing install them using brew and report what additional dependencies were installed.
