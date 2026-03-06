@@ -54,6 +54,7 @@ Environment variables:
 - `HAL_CACHE_REDIS_HOST` (default `127.0.0.1`)
 - `HAL_CACHE_REDIS_PORT` (default `6379`)
 - `HAL_CACHE_REDIS_DB` (default `0`)
+- `HAL_CACHE_CONTROL_PLANE_VERBOSE` (`1` to enable request/state logging)
 
 You can also pass CLI flags directly:
 

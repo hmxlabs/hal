@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -27,6 +28,7 @@ struct app_state {
 	char redis_host[256];
 	int redis_port;
 	int redis_db;
+	bool verbose;
 	volatile sig_atomic_t running;
 };
 
@@ -65,6 +67,39 @@ static void now_iso8601(char *buf, size_t size)
 	now = time(NULL);
 	gmtime_r(&now, &t);
 	strftime(buf, size, "%Y-%m-%dT%H:%M:%SZ", &t);
+}
+
+static bool env_is_truthy(const char *value)
+{
+	if (!value || !*value)
+		return false;
+	return !strcasecmp(value, "1") || !strcasecmp(value, "true") ||
+	       !strcasecmp(value, "yes") || !strcasecmp(value, "on");
+}
+
+static void cp_log(const struct app_state *app, const char *fmt, ...)
+{
+	char timestamp[64];
+	char msg[2048];
+	va_list ap;
+
+	if (!app || !app->verbose)
+		return;
+
+	now_iso8601(timestamp, sizeof(timestamp));
+	va_start(ap, fmt);
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+	vsnprintf(msg, sizeof(msg), fmt, ap);
+#pragma GCC diagnostic pop
+#else
+	vsnprintf(msg, sizeof(msg), fmt, ap);
+#endif
+	va_end(ap);
+
+	fprintf(stdout, "[%s] [control-plane] %s\n", timestamp, msg);
+	fflush(stdout);
 }
 
 static int str_to_int(const char *value, int dflt)
@@ -384,13 +419,15 @@ static bool append_request_body(struct request_ctx *ctx, const char *chunk,
 	return true;
 }
 
-static json_t *parse_json_body(struct request_ctx *ctx)
+static json_t *parse_json_body(const struct app_state *app, struct request_ctx *ctx)
 {
 	json_error_t error;
 
 	if (!ctx->body || ctx->body_len == 0)
 		return NULL;
 
+	if (app)
+		cp_log(app, "request body: %s", ctx->body);
 	return json_loadb(ctx->body, ctx->body_len, 0, &error);
 }
 
@@ -694,6 +731,10 @@ static int handle_list_instances(struct app_state *app,
 					   "Failed to allocate response");
 	}
 
+	cp_log(app, "request list_instances status_filter=%s region_filter=%s",
+	       status_filter ? status_filter : "-",
+	       region_filter ? region_filter : "-");
+
 	if (get_all_instance_ids(app, &ids, &count) != 0)
 		count = 0;
 
@@ -761,6 +802,7 @@ free_fields:
 	ret = send_json_response(connection, MHD_HTTP_OK, resp);
 	json_decref(resp);
 	free_ids(ids, count);
+	cp_log(app, "request list_instances returned=%zu instances", count);
 	return ret;
 }
 
@@ -787,6 +829,7 @@ static int handle_get_instance(struct app_state *app,
 		return send_error_response(connection, MHD_HTTP_NOT_FOUND,
 					   "not_found",
 					   "Instance not found");
+	cp_log(app, "get_instance requested id=%s", id);
 
 	snprintf(inst_hash, sizeof(inst_hash), "cp:instance:%s", id);
 	snprintf(child_key, sizeof(child_key), "cp:children:%s", id);
@@ -896,7 +939,8 @@ static int handle_register_instance(struct app_state *app,
 					   "already_exists",
 					   "Instance already registered");
 
-	body = parse_json_body(ctx);
+	cp_log(app, "register_instance requested id=%s", id);
+	body = parse_json_body(app, ctx);
 	if (!body)
 		return send_error_response(connection, MHD_HTTP_BAD_REQUEST,
 					   "bad_request",
@@ -946,6 +990,8 @@ static int handle_register_instance(struct app_state *app,
 		metadata_dump = json_dumps(metadata_j, JSON_COMPACT);
 	if (!metadata_dump)
 		metadata_dump = strdup("{}");
+	cp_log(app, "register_instance id=%s tier=%s region=%s parent=%s max_size=%lld",
+	       id, tier, region, parent, max_size);
 
 	now_iso8601(now, sizeof(now));
 	snprintf(inst_hash, sizeof(inst_hash), "cp:instance:%s", id);
@@ -986,6 +1032,7 @@ static int handle_register_instance(struct app_state *app,
 				    json_string(APP_VERSION));
 		ret = send_json_response(connection, MHD_HTTP_CREATED, resp);
 		json_decref(resp);
+		cp_log(app, "register_instance complete id=%s", id);
 	}
 
 	free(metadata_dump);
@@ -1008,7 +1055,8 @@ static int handle_heartbeat(struct app_state *app,
 					   "not_found",
 					   "Instance not found");
 
-	body = parse_json_body(ctx);
+	cp_log(app, "heartbeat requested id=%s", id);
+	body = parse_json_body(app, ctx);
 	if (!body)
 		return send_error_response(connection, MHD_HTTP_BAD_REQUEST,
 					   "bad_request",
@@ -1041,6 +1089,7 @@ static int handle_heartbeat(struct app_state *app,
 	now_iso8601(now, sizeof(now));
 	redis_hset_str(app, inst_hash, "lastHeartbeat", now);
 	redis_hset_str(app, inst_hash, "status", "active");
+	cp_log(app, "heartbeat complete id=%s", id);
 
 	json_decref(body);
 	{
@@ -1080,6 +1129,7 @@ static int handle_deregister(struct app_state *app,
 		return send_error_response(connection, MHD_HTTP_NOT_FOUND,
 					   "not_found",
 					   "Instance not found");
+	cp_log(app, "deregister requested id=%s", id);
 
 	snprintf(inst_hash, sizeof(inst_hash), "cp:instance:%s", id);
 	snprintf(inst_keys_hash, sizeof(inst_keys_hash), "cp:instance:%s:keys", id);
@@ -1124,6 +1174,7 @@ static int handle_deregister(struct app_state *app,
 	free(region);
 	free(status);
 	free(parent);
+	cp_log(app, "deregister complete id=%s", id);
 	return send_empty_response(connection, MHD_HTTP_NO_CONTENT);
 }
 
@@ -1479,7 +1530,8 @@ static int handle_update_instance_keys(struct app_state *app,
 					   "not_found",
 					   "Instance not found");
 
-	body = parse_json_body(ctx);
+	cp_log(app, "update_instance_keys requested id=%s mode=%s", id, mode);
+	body = parse_json_body(app, ctx);
 	if (!body)
 		return send_error_response(connection, MHD_HTTP_BAD_REQUEST,
 					   "bad_request",
@@ -1502,6 +1554,8 @@ static int handle_update_instance_keys(struct app_state *app,
 					   "bad_request",
 					   "mode must be full or partial");
 	}
+	cp_log(app, "update_instance_keys processing id=%s mode=%s key_count=%zu",
+	       id, mode, json_array_size(keys_j));
 
 	if (strcmp(mode, "full") == 0) {
 		char inst_keys_hash[512];
@@ -1569,6 +1623,8 @@ static int handle_update_instance_keys(struct app_state *app,
 	json_object_set_new(resp, "updated", json_integer(updated));
 	json_object_set_new(resp, "added", json_integer(added));
 	json_object_set_new(resp, "removed", json_integer(removed));
+	cp_log(app, "update_instance_keys complete id=%s added=%d removed=%d updated=%d",
+	       id, added, removed, updated);
 	ret = send_json_response(connection, MHD_HTTP_OK, resp);
 	json_decref(resp);
 	json_decref(body);
@@ -1905,7 +1961,8 @@ static int handle_single_event(struct app_state *app,
 	json_t *resp;
 	int ret;
 
-	body = parse_json_body(ctx);
+	cp_log(app, "single_event received");
+	body = parse_json_body(app, ctx);
 	if (!body)
 		return send_error_response(connection, MHD_HTTP_BAD_REQUEST,
 					   "bad_request",
@@ -1918,6 +1975,8 @@ static int handle_single_event(struct app_state *app,
 					   "bad_request",
 					   "Invalid event payload");
 	}
+	cp_log(app, "single_event validated instance=%s type=%s key=%s",
+	       instance_id, event_type, key);
 
 	if (apply_event(app, instance_id, event_type, key, size) != 0) {
 		json_decref(body);
@@ -1925,6 +1984,8 @@ static int handle_single_event(struct app_state *app,
 					   "bad_request",
 					   "Event references unknown instance");
 	}
+	cp_log(app, "single_event accepted instance=%s type=%s key=%s", instance_id,
+	       event_type, key);
 
 	snprintf(event_id, sizeof(event_id), "evt-%lld-%u", now_unix_ms(),
 		 (unsigned)rand());
@@ -1957,7 +2018,8 @@ static int handle_batch_event(struct app_state *app,
 	json_t *resp;
 	int ret;
 
-	body = parse_json_body(ctx);
+	cp_log(app, "batch_event received");
+	body = parse_json_body(app, ctx);
 	if (!body)
 		return send_error_response(connection, MHD_HTTP_BAD_REQUEST,
 					   "bad_request",
@@ -1974,6 +2036,8 @@ static int handle_batch_event(struct app_state *app,
 	}
 
 	instance_id = json_string_value(instance_j);
+	cp_log(app, "batch_event processing instance=%s event_count=%zu",
+	       instance_id, json_array_size(events_j));
 	if (!redis_instance_exists(app, instance_id)) {
 		json_decref(body);
 		return send_error_response(connection, MHD_HTTP_BAD_REQUEST,
@@ -2002,6 +2066,8 @@ static int handle_batch_event(struct app_state *app,
 						   "bad_request",
 						   "Invalid batch event payload");
 		}
+		cp_log(app, "batch_event accepted index=%zu instance=%s type=%s key=%s",
+		       i, instance_id, event_type, key);
 	}
 
 	snprintf(batch_id, sizeof(batch_id), "batch-%lld-%u", now_unix_ms(),
@@ -2017,6 +2083,8 @@ static int handle_batch_event(struct app_state *app,
 	json_object_set_new(resp, "count",
 			    json_integer((json_int_t)json_array_size(events_j)));
 	json_object_set_new(resp, "batchId", json_string(batch_id));
+	cp_log(app, "batch_event complete instance=%s count=%zu",
+	       instance_id, json_array_size(events_j));
 	ret = send_json_response(connection, MHD_HTTP_ACCEPTED, resp);
 	json_decref(resp);
 	json_decref(body);
@@ -2180,10 +2248,14 @@ static enum MHD_Result access_handler(void *cls,
 	if (ctx->responded)
 		return MHD_YES;
 
+	cp_log(app, "request_start method=%s url=%s", method, url);
+
 	if (!parse_path(url, &path))
 		return MHD_NO;
 
 	ret = dispatch_request(app, connection, method, &path, ctx);
+	cp_log(app, "request_complete method=%s url=%s result=%d", method, url,
+	       ret);
 	free_path(&path);
 	ctx->responded = true;
 	return ret;
@@ -2193,7 +2265,7 @@ static void usage(const char *prog)
 {
 	fprintf(stderr,
 		"Usage: %s [--port <port>] [--redis-host <host>] "
-		"[--redis-port <port>] [--redis-db <db>]\\n",
+		"[--redis-port <port>] [--redis-db <db>] [--verbose]\\n",
 		prog);
 }
 
@@ -2218,6 +2290,10 @@ static int parse_args(struct app_state *app, int argc, char **argv)
 		}
 		if (!strcmp(argv[i], "--redis-db") && i + 1 < argc) {
 			app->redis_db = str_to_int(argv[++i], app->redis_db);
+			continue;
+		}
+		if (!strcmp(argv[i], "--verbose")) {
+			app->verbose = true;
 			continue;
 		}
 		usage(argv[0]);
@@ -2266,6 +2342,7 @@ int main(int argc, char **argv)
 	app.redis_port = str_to_int(getenv("HAL_CACHE_REDIS_PORT"),
 				    DEFAULT_REDIS_PORT);
 	app.redis_db = str_to_int(getenv("HAL_CACHE_REDIS_DB"), DEFAULT_REDIS_DB);
+	app.verbose = env_is_truthy(getenv("HAL_CACHE_CONTROL_PLANE_VERBOSE"));
 	env = getenv("HAL_CACHE_REDIS_URL");
 	if (env)
 		fprintf(stderr,

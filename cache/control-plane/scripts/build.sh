@@ -59,6 +59,10 @@ cleanup() {
     kill "${SERVER_PID}" >/dev/null 2>&1 || true
     wait "${SERVER_PID}" >/dev/null 2>&1 || true
   fi
+  if [ -f "${CONSOLE_LOG}" ]; then
+    echo "--- cache-control-plane output log ---"
+    cat "${CONSOLE_LOG}"
+  fi
   if [ "${REDIS_STARTED}" -eq 1 ]; then
     redis-cli -h "${REDIS_HOST}" -p "${REDIS_PORT}" shutdown nosave >/dev/null 2>&1 || true
   fi
@@ -99,6 +103,9 @@ done
 echo "Running cache control-plane contract tests"
 echo "  contract_suite=${CONTRACT_SUITE_FILE}"
 HAL_CACHE_CONTROL_PLANE_URL="${CONTROL_PLANE_URL}" \
+  HAL_CACHE_CONTROL_PLANE_VERBOSE="${HAL_CACHE_CONTROL_PLANE_VERBOSE:-1}" \
+  HAL_CACHE_HURL_VERBOSE="${HAL_CACHE_HURL_VERBOSE:-1}" \
+  HAL_CACHE_CONTRACT_LOG_FILE="${TESTS_DIR}/contracts/hurl/build-${CONTROL_PLANE_PORT}-$(date +%s).log" \
   bash "${TESTS_DIR}/run-tests.sh" --contract-only
 
 echo "Contract test output captured by hurl in test process; check console for pass/fail details above"

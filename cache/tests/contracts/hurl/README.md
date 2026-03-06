@@ -66,11 +66,26 @@ From repo root:
 bash cache/tests/run-tests.sh --contract-only
 ```
 
+The script writes a full Hurl log to:
+
+`cache/tests/contracts/hurl/logs/contract-<RUN_ID>.log`
+
+You can override logging behavior:
+
+```bash
+HAL_CACHE_HURL_VERBOSE=1 \
+HAL_CACHE_CONTRACT_LOG_FILE=/tmp/control-plane-contract.log \
+HAL_CACHE_CONTRACT_RUN_ID=20260306 \
+bash cache/tests/run-tests.sh --contract-only
+```
+
 Optional environment variables:
 
 - `HAL_CACHE_CONTROL_PLANE_URL` (default `http://localhost:8080`)
 - `HAL_CACHE_CONTRACT_RUN_ID` (default current epoch seconds)
 - `HURL_BIN` (default `hurl`)
+- `HAL_CACHE_HURL_VERBOSE` (default `1`, set to `0` to disable)
+- `HAL_CACHE_CONTRACT_LOG_FILE` (override log file path)
 
 ## Notes
 

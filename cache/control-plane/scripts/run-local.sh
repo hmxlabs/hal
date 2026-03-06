@@ -27,4 +27,5 @@ if ! redis-cli -p "${REDIS_PORT}" ping >/dev/null 2>&1; then
   sleep 1
 fi
 
-exec "${BIN}" --port "${HTTP_PORT}" --redis-port "${REDIS_PORT}"
+HAL_CACHE_CONTROL_PLANE_VERBOSE="${HAL_CACHE_CONTROL_PLANE_VERBOSE:-1}" \
+  exec "${BIN}" --port "${HTTP_PORT}" --redis-port "${REDIS_PORT}"

@@ -197,3 +197,7 @@ run the script and ensure it actually runs to completion with all the tests pass
 - Harness: Codex Mac
 - Prompt:
 Check the build and test script in the cache/control-plane/scripts directory and ensure that it is actually building the control plane and then running the tests created at cache/tests/contracts/hurl
+
+Change the tests (and the implementation) so that they produce full log output that can ensure validation of what is happening.
+
+the code no longer compiles

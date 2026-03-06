@@ -21,6 +21,8 @@ Run:
 bash cache/tests/run-tests.sh --contract-only
 ```
 
+Test output is captured into `cache/tests/contracts/hurl/logs/contract-<RUN_ID>.log` by default.
+
 You can override the control-plane URL with:
 
 ```bash
