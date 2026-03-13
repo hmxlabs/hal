@@ -213,3 +213,25 @@ The code in cache/control-plane is not well structure. There is a lot of code in
 Refactor this code into multiple files split by functionality. Ensure that the code is testable and write unit test for all the code and update the build and test script to also run the unit tests
 
 make sure the build and test script works, and ensure that the code builds all the tests pass
+
+## 2026-03-14T05:00
+- Model: GPT 5.3-Codex-Spark High
+- Context: 
+- Harness: Codex Mac
+- Prompt:
+Immplement the cache component itself. This should be a copy of ValKey with the additional features to capture key data and notify the control plane added to it. Ensure that the code is well structured, maintainable and follows the coding standards used for the Linux kernel. Ensure that the code is thoroughly tested with unit tests and that all tests pass. Ensure that the code is well documented with comments and that there is documentation on how to build and run the cache component, as well as any dependencies it has. Place all the code in the src/cache-node directory. [THIS PROMPT ITSELF WAS WRITTEN USING AI  Opus 4.6 in Copilot!]
+
+## 2026-03-14T05:00
+- Model: GPT 5.3-Codex-Spark High
+- Context: 
+- Harness: Codex Mac
+- Prompt:
+Extend the tests in cache/tests/ so that they not only test the control plane but also test the cache component itself. For example, write tests that write data to a root node and then read that data from a leaf node and ensure that the data is correctly propagated through the cache topology and that the control plane is correctly updated with the state of where the data is located. Ensure that all possible scenarios of cache topologies are tested, including negative test cases where data is not found or where there are errors in the cache. Ensure that all tests pass and that they provide clear assertions for what the expected outcomes should be. [THIS PROMPT ITSELF WAS WRITTEN USING AI  Opus 4.6 in Copilot!]
+
+
+## 2026-03-14T05:01
+- Model: GPT 5.3-Codex-Spark High
+- Context: 
+- Harness: Codex Mac
+- Prompt:
+The src/cache-node-valkey directory contains the code for the ValKey cache. This code should be modified to add the additional features required for our cache component. Document all changes made in a README.md file also placed in the src/cache-node-valkey directory.
