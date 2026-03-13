@@ -29,6 +29,33 @@ You can override the control-plane URL with:
 HAL_CACHE_CONTROL_PLANE_URL=http://localhost:8080 bash cache/tests/run-tests.sh --contract-only
 ```
 
+## Cache Topology Scenario Tests
+
+To validate cache write/read propagation and control-plane holder updates for all topology
+scenario files in `cache/tests/*_scenarios.json`, use `--cache-scenarios`:
+
+```bash
+bash cache/tests/run-tests.sh --cache-scenarios --contract-only \
+  --root 'root1=127.0.0.1:6379;id=root-a' \
+  --branch 'branch1=127.0.0.1:6380;id=branch-a' \
+  --branch 'branch1a=127.0.0.1:6381;id=branch-a1' \
+  --branch 'branch1b=127.0.0.1:6382;id=branch-a2' \
+  --branch 'branch1c=127.0.0.1:6383;id=branch-a3' \
+  --branch 'branch2a=127.0.0.1:6384;id=branch-b1' \
+  --branch 'branch2b=127.0.0.1:6385;id=branch-b2' \
+  --branch 'branch2c=127.0.0.1:6386;id=branch-b3' \
+  --branch 'branch3a=127.0.0.1:6387;id=branch-c1' \
+  --branch 'branch3b=127.0.0.1:6388;id=branch-c2' \
+  --branch 'branch3c=127.0.0.1:6389;id=branch-c3' \
+  --leaf 'leaf1=127.0.0.1:6390;id=leaf-a' \
+  --leaf 'leaf2=127.0.0.1:6391;id=leaf-b' \
+  --leaf 'leaf3=127.0.0.1:6392;id=leaf-c'
+```
+
+You can pass `--scenario-file cache/tests/<file>` to target a subset of scenario files.
+
+If you need full control, run scenarios directly:
+
 ## Scenario Tests (Python)
 
 The Python CLI validates cache-node behavior against the HAL cache control
