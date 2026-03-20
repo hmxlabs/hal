@@ -19,6 +19,7 @@ CONTRACT_ONLY=false
 SKIP_UNIT_TESTS=false
 UNIT_TEST_ONLY=false
 RUN_CACHE_SCENARIOS=false
+RUN_CACHE_SCENARIOS_EXPLICIT=false
 ROOT_NODE_SPEC=""
 BRANCH_NODE_SPECS=()
 LEAF_NODE_SPECS=()
@@ -87,7 +88,8 @@ Options:
   --hurl-verbose BOOL   Enable hurl verbose output (default: 1; set HAL_CACHE_HURL_VERBOSE)
   --skip-unit-tests     Skip unit tests in this run
   --unit-only           Run only unit tests
-  --cache-scenarios     Run cache topology scenarios (via python framework)
+  --cache-scenarios     Run cache topology scenarios (via python framework; default for non-contract-only runs)
+  --no-cache-scenarios  Skip cache topology scenarios
   --root NODE_SPEC      Root node spec: name=host:port[;id=<cp-instance-id>]
   --branch NODE_SPEC    Branch node spec (repeatable): name=host:port[;id=<cp-instance-id>]
   --leaf NODE_SPEC      Leaf node spec (repeatable): name=host:port[;id=<cp-instance-id>]
@@ -622,6 +624,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     --cache-scenarios)
       RUN_CACHE_SCENARIOS=true
+      RUN_CACHE_SCENARIOS_EXPLICIT=true
+      shift
+      ;;
+    --no-cache-scenarios)
+      RUN_CACHE_SCENARIOS=false
+      RUN_CACHE_SCENARIOS_EXPLICIT=true
       shift
       ;;
     --no-autostart-control-plane)
@@ -716,6 +724,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "${CONTRACT_ONLY}" != "true" && "${RUN_CACHE_SCENARIOS_EXPLICIT}" != "true" ]]; then
+  RUN_CACHE_SCENARIOS=true
+fi
+
 run_unit_tests() {
   log "Running cache control-plane unit tests"
   make -C "${CONTROL_PLANE_DIR}" test
@@ -728,6 +740,8 @@ run_cache_scenario_suite() {
   fi
 
   local files=()
+  local failures=0
+  local file_status=0
   if [[ "${#SCENARIO_FILES[@]}" -eq 0 ]]; then
     files=("${SCENARIO_DEFAULT_FILES[@]}")
   else
@@ -760,8 +774,21 @@ run_cache_scenario_suite() {
       cmd+=(--leaf "${leaf}")
     done
 
-    run_with_timeout "${SCENARIO_COMMAND_TIMEOUT_SECONDS}" "${cmd[@]}"
+    if run_with_timeout "${SCENARIO_COMMAND_TIMEOUT_SECONDS}" "${cmd[@]}"; then
+      file_status=0
+    else
+      file_status=$?
+      failures=$((failures + 1))
+      log "cache topology scenario file failed (exit ${file_status}): ${scenario_file}"
+    fi
   done
+
+  if (( failures > 0 )); then
+    log "cache topology scenario suite completed with ${failures} failed file(s)"
+    return 1
+  fi
+
+  log "cache topology scenario suite completed successfully"
 }
 
 if ! command -v make >/dev/null 2>&1; then

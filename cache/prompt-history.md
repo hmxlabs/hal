@@ -247,4 +247,8 @@ the implementation of the caching layer (cache/cache-node) does not build or pas
 
 If necessary create an implementation plan first with a subagent to re-implement the code.
 
-Running the tests at cache/tests/run_tests.sh just hangs forever.
+Running the tests at cache/tests/run_tests.sh just hangs forever. There is no log output to see what's happening or why. Fix both problems
+
+run-tests.sh is now only running contract tests. Ensure that it runs the full distributed test suite.
+
+its still running only contract tests. run it to ensure the full test suite is being run.
