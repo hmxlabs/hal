@@ -25,6 +25,7 @@ struct cache_node_store {
 	size_t max_items;
 	size_t used_bytes;
 	size_t key_count;
+	enum cache_node_eviction_policy eviction_policy;
 	size_t bucket_count;
 	struct cache_node_entry **buckets;
 	struct cache_node_entry *lru_head;
@@ -201,6 +202,13 @@ static int cache_node_delete_entry_internal(struct cache_node_store *store,
 
 static int cache_node_evict_if_needed(struct cache_node_store *store)
 {
+	if (store->eviction_policy == CACHE_NODE_EVICTION_POLICY_NOEVICTION) {
+		if ((store->max_bytes && store->used_bytes > store->max_bytes) ||
+		    (store->max_items && store->key_count > store->max_items))
+			return -ENOSPC;
+		return 0;
+	}
+
 	while ((store->max_bytes && store->used_bytes > store->max_bytes) ||
 	       (store->max_items && store->key_count > store->max_items)) {
 		if (!store->lru_tail)
@@ -210,6 +218,59 @@ static int cache_node_evict_if_needed(struct cache_node_store *store)
 			return -1;
 	}
 	return 0;
+}
+
+int cache_node_store_set_limits(struct cache_node_store *store,
+			       size_t max_bytes, size_t max_items)
+{
+	if (!store)
+		return -EINVAL;
+
+	store->max_bytes = max_bytes;
+	store->max_items = max_items;
+	return cache_node_evict_if_needed(store);
+}
+
+int cache_node_store_set_eviction_policy(
+	struct cache_node_store *store,
+	enum cache_node_eviction_policy policy)
+{
+	if (!store ||
+	    (policy != CACHE_NODE_EVICTION_POLICY_ALLKEYS_LRU &&
+	     policy != CACHE_NODE_EVICTION_POLICY_NOEVICTION))
+		return -EINVAL;
+
+	store->eviction_policy = policy;
+	return cache_node_evict_if_needed(store);
+}
+
+size_t cache_node_store_get_max_bytes(const struct cache_node_store *store)
+{
+	if (!store)
+		return 0;
+	return store->max_bytes;
+}
+
+size_t cache_node_store_get_max_items(const struct cache_node_store *store)
+{
+	if (!store)
+		return 0;
+	return store->max_items;
+}
+
+const char *cache_node_store_get_instance_id(const struct cache_node_store *store)
+{
+	if (!store)
+		return NULL;
+	return store->instance_id;
+}
+
+enum cache_node_eviction_policy
+cache_node_store_get_eviction_policy(const struct cache_node_store *store)
+{
+	if (!store)
+		return CACHE_NODE_EVICTION_POLICY_ALLKEYS_LRU;
+	return store->eviction_policy;
 }
 
 static int cache_node_create_bucket_store(struct cache_node_store *store,
@@ -245,6 +306,7 @@ int cache_node_store_create(const struct cache_node_store_config *config,
 		 config->instance_id);
 	store->max_bytes = config->max_bytes;
 	store->max_items = config->max_items;
+	store->eviction_policy = CACHE_NODE_EVICTION_POLICY_ALLKEYS_LRU;
 	store->notify_fn = config->notify_fn;
 	store->notify_ctx = config->notify_ctx;
 
@@ -282,7 +344,7 @@ int cache_node_store_set(struct cache_node_store *store, const char *key,
 	struct cache_node_event event;
 	int exists = 0;
 
-	if (!store || !key || !value || value_len == 0)
+	if (!store || !key || !value)
 		return -EINVAL;
 	if (strlen(key) == 0 || strlen(key) >= CACHE_NODE_MAX_KEY_LEN)
 		return -EINVAL;
@@ -294,6 +356,13 @@ int cache_node_store_set(struct cache_node_store *store, const char *key,
 
 	if (cache_node_find_entry(store, key, &entry) == 0 && entry)
 		exists = 1;
+	if (!exists && store->eviction_policy ==
+	    CACHE_NODE_EVICTION_POLICY_NOEVICTION) {
+		if ((store->max_bytes && (store->used_bytes + value_len) >
+				     store->max_bytes) ||
+		    (store->max_items && (store->key_count + 1) > store->max_items))
+			return -ENOSPC;
+	}
 
 	value_copy = malloc(value_len + 1);
 	if (!value_copy)
@@ -304,6 +373,11 @@ int cache_node_store_set(struct cache_node_store *store, const char *key,
 	if (exists) {
 		size_t new_used = store->used_bytes -
 				  entry->value_len + value_len;
+
+		if (store->eviction_policy == CACHE_NODE_EVICTION_POLICY_NOEVICTION &&
+		    store->max_bytes > 0 &&
+		    new_used > store->max_bytes)
+			return -ENOSPC;
 
 		free(entry->value);
 		entry->value = value_copy;

@@ -24,6 +24,12 @@ Runtime/build dependencies:
 - `pkgconf` (`pkg-config`)
 - `hurl` (for contract tests)
 
+You can install dependencies in one command:
+
+```bash
+bash cache/control-plane/scripts/bootstrap-deps.sh
+```
+
 ## Build
 
 ```bash

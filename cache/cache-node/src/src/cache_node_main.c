@@ -52,6 +52,7 @@ int main(int argc, char **argv)
 	struct cache_node_server_config server_cfg = {
 		.listen_host = "0.0.0.0",
 		.listen_port = 6379,
+		.control_plane_events_url = NULL,
 		.verbose = false,
 	};
 	int i;
@@ -139,6 +140,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Invalid control plane URL: %s\n", cp_url);
 			return 1;
 		}
+		server_cfg.control_plane_events_url = cp_url;
 		cfg.notify_fn = cache_node_http_notifier;
 		cfg.notify_ctx = notifier;
 	}

@@ -19,6 +19,11 @@ enum cache_node_event_type {
 	CACHE_NODE_EVENT_KEY_EVICTED,
 };
 
+enum cache_node_eviction_policy {
+	CACHE_NODE_EVICTION_POLICY_ALLKEYS_LRU = 0,
+	CACHE_NODE_EVICTION_POLICY_NOEVICTION,
+};
+
 struct cache_node_event {
 	enum cache_node_event_type type;
 	char instance_id[CACHE_NODE_MAX_INSTANCE_ID];
@@ -45,12 +50,23 @@ struct cache_node_store_config {
 struct cache_node_server_config {
 	const char *listen_host;
 	unsigned short listen_port;
+	const char *control_plane_events_url;
 	bool verbose;
 };
 
 int cache_node_store_create(const struct cache_node_store_config *config,
 			   struct cache_node_store **store);
 void cache_node_store_destroy(struct cache_node_store *store);
+int cache_node_store_set_limits(struct cache_node_store *store,
+			       size_t max_bytes, size_t max_items);
+int cache_node_store_set_eviction_policy(
+	struct cache_node_store *store,
+	enum cache_node_eviction_policy policy);
+size_t cache_node_store_get_max_bytes(const struct cache_node_store *store);
+size_t cache_node_store_get_max_items(const struct cache_node_store *store);
+const char *cache_node_store_get_instance_id(const struct cache_node_store *store);
+enum cache_node_eviction_policy cache_node_store_get_eviction_policy(
+	const struct cache_node_store *store);
 int cache_node_store_set(struct cache_node_store *store, const char *key,
 			const void *value, size_t value_len,
 			const char *source_instance_id,
