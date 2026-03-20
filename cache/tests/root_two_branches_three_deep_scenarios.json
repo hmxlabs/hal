@@ -278,7 +278,7 @@
           "op": "set_config",
           "node": "branch2c",
           "param": "maxmemory",
-          "value": "1"
+          "value": "8"
         },
         {
           "op": "write_expect_failure",

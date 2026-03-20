@@ -598,6 +598,7 @@ cleanup_distributed_services() {
       terminate_pid "${pid}" "cache-node"
     fi
   done
+  CACHE_NODE_PIDS=()
   if [[ "${CONTROL_PLANE_STARTED}" == "true" && -n "${CONTROL_PLANE_PID}" ]]; then
     terminate_pid "${CONTROL_PLANE_PID}" "cache-control-plane"
   fi
@@ -606,6 +607,7 @@ cleanup_distributed_services() {
       curl -sS -X DELETE "${BASE_URL%/}/v1/instances/${spec}/deregister" >/dev/null 2>&1 || true
     fi
   done
+  CACHE_NODE_INSTANCE_IDS=()
 }
 
 while [[ $# -gt 0 ]]; do
@@ -742,6 +744,7 @@ run_cache_scenario_suite() {
   local files=()
   local failures=0
   local file_status=0
+  local first_file=true
   if [[ "${#SCENARIO_FILES[@]}" -eq 0 ]]; then
     files=("${SCENARIO_DEFAULT_FILES[@]}")
   else
@@ -749,6 +752,14 @@ run_cache_scenario_suite() {
   fi
 
   for scenario_file in "${files[@]}"; do
+    if [[ "${first_file}" == "true" ]]; then
+      first_file=false
+    else
+      cleanup_distributed_services
+      reset_control_plane_state
+      start_distributed_services
+    fi
+
     if [[ ! -f "${scenario_file}" ]]; then
       echo "error: Cache scenario file not found: ${scenario_file}" >&2
       exit 1

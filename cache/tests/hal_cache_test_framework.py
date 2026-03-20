@@ -587,6 +587,20 @@ class CacheTestFramework:
             if not expected_failure:
                 raise
             error_text = str(exc)
+            failure_index = outputs.__len__() + 1
+            cleanup_outputs: List[Dict[str, Any]] = []
+            try:
+                cleanup_outputs = self._run_expected_failure_cleanup(
+                    scenario_name=name,
+                    failed_index=failure_index,
+                    steps=steps,
+                    outputs=outputs,
+                )
+            except FrameworkError as cleanup_exc:
+                raise FrameworkError(
+                    f"Scenario {name!r} failed as expected, but cleanup failed after failure: {cleanup_exc}"
+                ) from cleanup_exc
+
             if expected_error_contains and expected_error_contains not in error_text:
                 raise FrameworkError(
                     f"Scenario {name!r} failed as expected, but error did not contain "
@@ -596,7 +610,7 @@ class CacheTestFramework:
                 "scenario": name,
                 "stepCount": len(outputs),
                 "elapsedSeconds": round(time.monotonic() - started, 3),
-                "steps": outputs,
+                "steps": outputs + cleanup_outputs,
                 "expectedFailure": True,
                 "failedAsExpected": True,
                 "error": error_text,
@@ -614,6 +628,29 @@ class CacheTestFramework:
             "steps": outputs,
             "expectedFailure": False,
         }
+
+    def _run_expected_failure_cleanup(
+        self,
+        *,
+        scenario_name: str,
+        failed_index: int,
+        steps: List[Dict[str, Any]],
+        outputs: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        cleanup_ops = {"set_config", "delete"}
+        cleanup_outputs: List[Dict[str, Any]] = []
+
+        for index, step in enumerate(steps[failed_index - 1 :], start=failed_index):
+            if not isinstance(step, dict):
+                raise FrameworkError(
+                    f"Scenario {scenario_name!r} step {index} is not an object."
+                )
+            op = str(step.get("op", "")).strip()
+            if op not in cleanup_ops:
+                continue
+            cleanup_outputs.append(self._run_step(scenario_name, index, step))
+        outputs.extend(cleanup_outputs)
+        return cleanup_outputs
 
     def _run_step(self, scenario_name: str, index: int, step: Dict[str, Any]) -> Dict[str, Any]:
         op = str(step.get("op", "")).strip()

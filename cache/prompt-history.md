@@ -252,3 +252,5 @@ Running the tests at cache/tests/run_tests.sh just hangs forever. There is no lo
 run-tests.sh is now only running contract tests. Ensure that it runs the full distributed test suite.
 
 its still running only contract tests. run it to ensure the full test suite is being run.
+
+the test output clearly states there are failed tests. Identify and fix the failed tests. Do not return till this is complete

@@ -1,6 +1,56 @@
 {
   "scenarios": [
     {
+      "name": "root_only_write_when_full_noeviction_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "capture_config",
+          "node": "root1",
+          "param": "maxmemory",
+          "as": "root1_original_maxmemory"
+        },
+        {
+          "op": "capture_config",
+          "node": "root1",
+          "param": "maxmemory-policy",
+          "as": "root1_original_maxmemory_policy"
+        },
+        {
+          "op": "set_config",
+          "node": "root1",
+          "param": "maxmemory-policy",
+          "value": "noeviction"
+        },
+        {
+          "op": "set_config",
+          "node": "root1",
+          "param": "maxmemory",
+          "value": "8"
+        },
+        {
+          "op": "write_expect_failure",
+          "node": "root1",
+          "key": "test:root-only:oomexpected:001",
+          "value": "this-value-should-fail-because-no-memory",
+          "error_contains": "OOM"
+        },
+        {
+          "op": "set_config",
+          "node": "root1",
+          "param": "maxmemory",
+          "value_from": "root1_original_maxmemory"
+        },
+        {
+          "op": "set_config",
+          "node": "root1",
+          "param": "maxmemory-policy",
+          "value_from": "root1_original_maxmemory_policy"
+        }
+      ]
+    },
+    {
       "name": "root_only_write_and_locate",
       "steps": [
         {
@@ -112,56 +162,6 @@
           "node": "root1",
           "key": "test:root-only:missing:001",
           "expected_value": "does-not-exist"
-        }
-      ]
-    },
-    {
-      "name": "root_only_write_when_full_noeviction_should_fail",
-      "negative": true,
-      "expected_failure": true,
-      "steps": [
-        {
-          "op": "capture_config",
-          "node": "root1",
-          "param": "maxmemory",
-          "as": "root1_original_maxmemory"
-        },
-        {
-          "op": "capture_config",
-          "node": "root1",
-          "param": "maxmemory-policy",
-          "as": "root1_original_maxmemory_policy"
-        },
-        {
-          "op": "set_config",
-          "node": "root1",
-          "param": "maxmemory-policy",
-          "value": "noeviction"
-        },
-        {
-          "op": "set_config",
-          "node": "root1",
-          "param": "maxmemory",
-          "value": "1"
-        },
-        {
-          "op": "write_expect_failure",
-          "node": "root1",
-          "key": "test:root-only:oomexpected:001",
-          "value": "this-value-should-fail-because-no-memory",
-          "error_contains": "OOM"
-        },
-        {
-          "op": "set_config",
-          "node": "root1",
-          "param": "maxmemory",
-          "value_from": "root1_original_maxmemory"
-        },
-        {
-          "op": "set_config",
-          "node": "root1",
-          "param": "maxmemory-policy",
-          "value_from": "root1_original_maxmemory_policy"
         }
       ]
     }

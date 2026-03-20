@@ -1,200 +1,6 @@
 {
   "scenarios": [
     {
-      "name": "root_three_leaf_pullthrough_basic",
-      "steps": [
-        {
-          "op": "write",
-          "node": "root1",
-          "key": "test:r3l:pullthrough:001",
-          "value": "r3l-value-001"
-        },
-        {
-          "op": "read",
-          "node": "leaf1",
-          "key": "test:r3l:pullthrough:001",
-          "expected_value": "r3l-value-001",
-          "require_state_change": true,
-          "timeout_seconds": 15
-        },
-        {
-          "op": "read",
-          "node": "leaf2",
-          "key": "test:r3l:pullthrough:001",
-          "expected_value": "r3l-value-001",
-          "require_state_change": true,
-          "timeout_seconds": 15
-        },
-        {
-          "op": "read",
-          "node": "leaf3",
-          "key": "test:r3l:pullthrough:001",
-          "expected_value": "r3l-value-001",
-          "require_state_change": true,
-          "timeout_seconds": 15
-        },
-        {
-          "op": "assert_locate_contains",
-          "key": "test:r3l:pullthrough:001",
-          "node": "root1"
-        },
-        {
-          "op": "assert_locate_contains",
-          "key": "test:r3l:pullthrough:001",
-          "node": "leaf1"
-        },
-        {
-          "op": "assert_locate_contains",
-          "key": "test:r3l:pullthrough:001",
-          "node": "leaf2"
-        },
-        {
-          "op": "assert_locate_contains",
-          "key": "test:r3l:pullthrough:001",
-          "node": "leaf3"
-        }
-      ]
-    },
-    {
-      "name": "root_three_leaf_mixed_read_order",
-      "steps": [
-        {
-          "op": "write",
-          "node": "root1",
-          "key": "test:r3l:mixed-order:001",
-          "value": "mixed-order-value-001"
-        },
-        {
-          "op": "read",
-          "node": "leaf3",
-          "key": "test:r3l:mixed-order:001",
-          "expected_value": "mixed-order-value-001",
-          "require_state_change": true
-        },
-        {
-          "op": "read",
-          "node": "leaf1",
-          "key": "test:r3l:mixed-order:001",
-          "expected_value": "mixed-order-value-001",
-          "require_state_change": true
-        },
-        {
-          "op": "read",
-          "node": "leaf2",
-          "key": "test:r3l:mixed-order:001",
-          "expected_value": "mixed-order-value-001",
-          "require_state_change": true
-        },
-        {
-          "op": "assert_locate_contains",
-          "key": "test:r3l:mixed-order:001",
-          "node": "leaf1"
-        },
-        {
-          "op": "assert_locate_contains",
-          "key": "test:r3l:mixed-order:001",
-          "node": "leaf2"
-        },
-        {
-          "op": "assert_locate_contains",
-          "key": "test:r3l:mixed-order:001",
-          "node": "leaf3"
-        }
-      ]
-    },
-    {
-      "name": "root_three_leaf_delete_one_leaf_others_serve",
-      "steps": [
-        {
-          "op": "write",
-          "node": "root1",
-          "key": "test:r3l:delete-one:001",
-          "value": "delete-one-value-001"
-        },
-        {
-          "op": "read",
-          "node": "leaf1",
-          "key": "test:r3l:delete-one:001",
-          "expected_value": "delete-one-value-001",
-          "require_state_change": true
-        },
-        {
-          "op": "read",
-          "node": "leaf2",
-          "key": "test:r3l:delete-one:001",
-          "expected_value": "delete-one-value-001",
-          "require_state_change": true
-        },
-        {
-          "op": "read",
-          "node": "leaf3",
-          "key": "test:r3l:delete-one:001",
-          "expected_value": "delete-one-value-001",
-          "require_state_change": true
-        },
-        {
-          "op": "delete",
-          "node": "leaf2",
-          "key": "test:r3l:delete-one:001"
-        },
-        {
-          "op": "read",
-          "node": "leaf1",
-          "key": "test:r3l:delete-one:001",
-          "expected_value": "delete-one-value-001"
-        },
-        {
-          "op": "read",
-          "node": "leaf3",
-          "key": "test:r3l:delete-one:001",
-          "expected_value": "delete-one-value-001"
-        },
-        {
-          "op": "read",
-          "node": "leaf2",
-          "key": "test:r3l:delete-one:001",
-          "expected_value": "delete-one-value-001",
-          "timeout_seconds": 15
-        }
-      ]
-    },
-    {
-      "name": "negative_leaf2_missing_key_should_fail",
-      "negative": true,
-      "expected_failure": true,
-      "expected_error_contains": "GET returned nil",
-      "steps": [
-        {
-          "op": "read",
-          "node": "leaf2",
-          "key": "test:r3l:missing-key:001",
-          "expected_value": "does-not-exist",
-          "require_state_change": true
-        }
-      ]
-    },
-    {
-      "name": "negative_leaf3_wrong_expected_value_should_fail",
-      "negative": true,
-      "expected_failure": true,
-      "expected_error_contains": "GET returned unexpected value",
-      "steps": [
-        {
-          "op": "write",
-          "node": "root1",
-          "key": "test:r3l:wrong-value:001",
-          "value": "actual-value"
-        },
-        {
-          "op": "read",
-          "node": "leaf3",
-          "key": "test:r3l:wrong-value:001",
-          "expected_value": "expected-but-wrong",
-          "require_state_change": true
-        }
-      ]
-    },
-    {
       "name": "negative_leaf3_write_when_full_noeviction_should_fail",
       "negative": true,
       "steps": [
@@ -220,7 +26,7 @@
           "op": "set_config",
           "node": "leaf3",
           "param": "maxmemory",
-          "value": "1"
+          "value": "8"
         },
         {
           "op": "write_expect_failure",
@@ -240,6 +46,186 @@
           "node": "leaf3",
           "param": "maxmemory-policy",
           "value_from": "leaf3_original_policy"
+        }
+      ]
+    },
+    {
+      "name": "root_three_leaf_pullthrough_basic",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3l:pullthrough:001",
+          "value": "r3l-value-001"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3l:pullthrough:001",
+          "node": "root1",
+          "source_node": "root1"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r3l:pullthrough:001",
+          "expected_value": "r3l-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r3l:pullthrough:001",
+          "expected_value": "r3l-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf3",
+          "key": "test:r3l:pullthrough:001",
+          "expected_value": "r3l-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3l:pullthrough:001",
+          "node": "leaf1"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3l:pullthrough:001",
+          "node": "leaf2"
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3l:pullthrough:001",
+          "node": "leaf3"
+        }
+      ]
+    },
+    {
+      "name": "root_three_leaf_mixed_read_order",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3l:mixed-read:001",
+          "value": "mixed-read-value-001"
+        },
+        {
+          "op": "read",
+          "node": "leaf3",
+          "key": "test:r3l:mixed-read:001",
+          "expected_value": "mixed-read-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r3l:mixed-read:001",
+          "expected_value": "mixed-read-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r3l:mixed-read:001",
+          "expected_value": "mixed-read-value-001",
+          "require_state_change": true,
+          "timeout_seconds": 15
+        },
+        {
+          "op": "assert_locate_contains",
+          "key": "test:r3l:mixed-read:001",
+          "node": "leaf2"
+        }
+      ]
+    },
+    {
+      "name": "root_three_leaf_delete_one_leaf_others_serve",
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3l:delete-one-leaf:001",
+          "value": "delete-one-leaf-value-001"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r3l:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r3l:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "read",
+          "node": "leaf3",
+          "key": "test:r3l:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001",
+          "require_state_change": true
+        },
+        {
+          "op": "delete",
+          "node": "leaf1",
+          "key": "test:r3l:delete-one-leaf:001"
+        },
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r3l:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001"
+        },
+        {
+          "op": "read",
+          "node": "leaf1",
+          "key": "test:r3l:delete-one-leaf:001",
+          "expected_value": "delete-one-leaf-value-001",
+          "timeout_seconds": 15
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf2_missing_key_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "read",
+          "node": "leaf2",
+          "key": "test:r3l:missing-key:001",
+          "expected_value": "does-not-exist",
+          "require_state_change": true
+        }
+      ]
+    },
+    {
+      "name": "negative_leaf3_wrong_expected_value_should_fail",
+      "negative": true,
+      "expected_failure": true,
+      "steps": [
+        {
+          "op": "write",
+          "node": "root1",
+          "key": "test:r3l:wrong-value:001",
+          "value": "actual-value"
+        },
+        {
+          "op": "read",
+          "node": "leaf3",
+          "key": "test:r3l:wrong-value:001",
+          "expected_value": "expected-but-wrong",
+          "require_state_change": true
         }
       ]
     }

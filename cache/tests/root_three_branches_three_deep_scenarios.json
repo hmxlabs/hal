@@ -332,7 +332,7 @@
           "op": "set_config",
           "node": "branch3c",
           "param": "maxmemory",
-          "value": "1"
+          "value": "8"
         },
         {
           "op": "write_expect_failure",

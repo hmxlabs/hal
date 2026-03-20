@@ -265,7 +265,7 @@ static int cache_node_http_json_to_payload(const char *response,
 					 size_t *payload_len)
 {
 	char *separator;
-	if (!response || !payload || !payload_len)
+	if (!response || !payload)
 		return -1;
 
 	separator = strstr(response, "\r\n\r\n");
@@ -273,7 +273,9 @@ static int cache_node_http_json_to_payload(const char *response,
 		return -1;
 
 	*payload = separator + 4;
-	*payload_len = response_len - (size_t)(*payload - response);
+	if (payload_len) {
+		*payload_len = response_len - (size_t)(*payload - response);
+	}
 	return 0;
 }
 
